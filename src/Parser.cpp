@@ -24,7 +24,13 @@ std::unique_ptr<ASTNode> Parser::parse() {
 }
 
 std::unique_ptr<ASTNode> Parser::parseStatement() {
-    // 这里简化处理，只解析表达式语句
+    if (currentToken.type == TOKEN_PRINT) {
+        advance(); // 跳过print关键字
+        expect(TOKEN_LPAREN);
+        auto expr = parseExpression();
+        expect(TOKEN_RPAREN);
+        return std::make_unique<PrintExpr>(std::move(expr));
+    }
     return parseExpression();
 }
 

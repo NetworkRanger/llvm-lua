@@ -8,7 +8,7 @@
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
-        llvm::errs() << "Usage: " << argv[0] << " <input.lua>\n";
+        std::cerr << "Usage: " << argv[0] << " <input.lua>\n";
         return 1;
     }
 
@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
     {
         std::ifstream file(argv[1]);
         if (!file) {
-            llvm::errs() << "Error: Cannot open input file\n";
+            std::cerr << "Error: Cannot open input file\n";
             return 1;
         }
         std::stringstream buffer;
@@ -25,31 +25,42 @@ int main(int argc, char* argv[]) {
         source = buffer.str();
     }
     
+    std::cout << "Source code: '" << source << "'" << std::endl;
+    
     // 创建词法分析器
     Lexer lexer(source);
+    
+    // 打印所有token
+    std::cout << "\nTokenizing..." << std::endl;
+    Token token;
+    do {
+        token = lexer.getNextToken();
+        std::cout << "Token: type=" << token.type 
+                  << ", value='" << token.value 
+                  << "', line=" << token.line 
+                  << ", column=" << token.column << std::endl;
+    } while (token.type != TOKEN_EOF);
+    
+    // 重置词法分析器
+    lexer = Lexer(source);
     
     // 创建语法分析器
     Parser parser(lexer);
     
-    // 解析代码生成AST
-    auto ast = parser.parse();
-    if (!ast) {
-        llvm::errs() << "Error: Failed to parse input\n";
+    try {
+        auto ast = parser.parse();
+        if (!ast) {
+            std::cerr << "Error: Failed to parse input\n";
+            return 1;
+        }
+        
+        CodeGenerator codegen;
+        codegen.generateCode(ast.get());
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
     
-    // 创建代码生成器
-    CodeGenerator codegen;
-    
-    // 生成LLVM IR
-    codegen.generateCode(ast.get());
-    
-    // 生成目标文件
-    if (!codegen.generateObjectFile("output.o")) {
-        llvm::errs() << "Error: Failed to generate object file\n";
-        return 1;
-    }
-    
-    llvm::errs() << "Compilation successful!\n";
     return 0;
 } 

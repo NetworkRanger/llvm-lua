@@ -17,7 +17,10 @@ private:
     std::unique_ptr<llvm::IRBuilder<>> builder;
     std::unique_ptr<llvm::Module> module;
     llvm::Value* lastValue;
+    llvm::Function* printfFunc;
     
     void visitNumberExpr(NumberExpr* node) override;
     void visitBinaryExpr(BinaryExpr* node) override;
+    void visitPrintExpr(PrintExpr* node) override;
+    void declarePrintf();
 }; 

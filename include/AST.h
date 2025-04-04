@@ -35,4 +35,14 @@ private:
     std::unique_ptr<ASTNode> left;
     std::string op;
     std::unique_ptr<ASTNode> right;
+};
+
+class PrintExpr : public ASTNode {
+public:
+    PrintExpr(std::unique_ptr<ASTNode> expr) : expr(std::move(expr)) {}
+    const std::unique_ptr<ASTNode>& getExpr() const { return expr; }
+    void accept(ASTVisitor& visitor) override;
+    
+private:
+    std::unique_ptr<ASTNode> expr;
 }; 

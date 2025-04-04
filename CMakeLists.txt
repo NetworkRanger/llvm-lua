@@ -24,9 +24,9 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-# 设置编译标志，移除-fno-exceptions
+# 设置编译标志，移除-fno-exceptions并添加调试信息
 string(REPLACE "-fno-exceptions" "" LLVM_CXXFLAGS "${LLVM_CXXFLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LLVM_CXXFLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LLVM_CXXFLAGS} -g")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LLVM_LDFLAGS}")
 
 # 添加LLVM的头文件路径和定义

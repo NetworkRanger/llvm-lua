@@ -23,7 +23,8 @@ static std::unordered_map<std::string, TokenType> keywords = {
     {"then", TOKEN_THEN},
     {"true", TOKEN_TRUE},
     {"until", TOKEN_UNTIL},
-    {"while", TOKEN_WHILE}
+    {"while", TOKEN_WHILE},
+    {"print", TOKEN_PRINT},
 };
 
 Lexer::Lexer(const std::string& source) 

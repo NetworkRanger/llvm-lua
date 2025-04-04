@@ -16,10 +16,23 @@
 #include <iostream>
 #include <system_error>
 
+void CodeGenerator::declarePrintf() {
+    // 声明printf函数
+    std::vector<llvm::Type*> printfArgs;
+    printfArgs.push_back(llvm::PointerType::get(builder->getInt8Ty(), 0));
+    llvm::FunctionType* printfType = llvm::FunctionType::get(
+        llvm::Type::getInt32Ty(*context), printfArgs, true);
+    printfFunc = llvm::Function::Create(
+        printfType, llvm::Function::ExternalLinkage, "printf", module.get());
+}
+
 CodeGenerator::CodeGenerator() {
     context = std::make_unique<llvm::LLVMContext>();
     module = std::make_unique<llvm::Module>("lua", *context);
     builder = std::make_unique<llvm::IRBuilder<>>(*context);
+    
+    // 声明printf函数
+    declarePrintf();
     
     // 创建main函数
     llvm::FunctionType* mainType = llvm::FunctionType::get(
@@ -35,10 +48,16 @@ CodeGenerator::CodeGenerator() {
 void CodeGenerator::generateCode(ASTNode* root) {
     if (root) {
         root->accept(*this);
+        
+        // 将浮点结果转换为整数返回
+        if (lastValue) {
+            auto intResult = builder->CreateFPToSI(lastValue, 
+                llvm::Type::getInt32Ty(*context), "result");
+            builder->CreateRet(intResult);
+        } else {
+            builder->CreateRet(llvm::ConstantInt::get(*context, llvm::APInt(32, 0)));
+        }
     }
-    
-    // 添加返回语句到main函数
-    builder->CreateRet(llvm::ConstantInt::get(*context, llvm::APInt(32, 0)));
     
     // 验证生成的代码
     llvm::verifyModule(*module, &llvm::errs());
@@ -84,6 +103,23 @@ void CodeGenerator::visitBinaryExpr(BinaryExpr* node) {
     }
 }
 
+void CodeGenerator::visitPrintExpr(PrintExpr* node) {
+    // 生成要打印的表达式的代码
+    node->getExpr()->accept(*this);
+    llvm::Value* exprValue = lastValue;
+    
+    // 创建格式字符串，使用新的API
+    llvm::Value* formatStr = builder->CreateGlobalString("%f\n", "format");
+    llvm::Value* formatStrPtr = builder->CreatePointerCast(
+        formatStr, llvm::PointerType::get(builder->getInt8Ty(), 0));
+    
+    // 调用printf
+    std::vector<llvm::Value*> args;
+    args.push_back(formatStrPtr);
+    args.push_back(exprValue);
+    lastValue = builder->CreateCall(printfFunc, args);
+}
+
 bool CodeGenerator::generateObjectFile(const std::string& filename) {
     // 初始化所有目标
     llvm::InitializeAllTargetInfos();
@@ -108,10 +144,19 @@ bool CodeGenerator::generateObjectFile(const std::string& filename) {
 
     llvm::TargetOptions opt;
     auto RM = std::optional<llvm::Reloc::Model>();
-    auto targetMachine = target->createTargetMachine(targetTriple, CPU, features, opt, RM);
+    
+    // 创建目标机器，不指定优化级别
+    auto targetMachine = target->createTargetMachine(
+        targetTriple, CPU, features, opt, RM
+    );
 
     module->setDataLayout(targetMachine->createDataLayout());
 
+    // 添加一个新的Pass Manager来处理优化
+    llvm::legacy::PassManager PM;
+    
+    // 不添加任何优化Pass
+    
     std::error_code EC;
     llvm::raw_fd_ostream dest(filename, EC, llvm::sys::fs::OF_None);
 
@@ -120,15 +165,14 @@ bool CodeGenerator::generateObjectFile(const std::string& filename) {
         return false;
     }
 
-    llvm::legacy::PassManager pass;
     auto fileType = llvm::CodeGenFileType::ObjectFile;
 
-    if (targetMachine->addPassesToEmitFile(pass, dest, nullptr, fileType)) {
+    if (targetMachine->addPassesToEmitFile(PM, dest, nullptr, fileType)) {
         llvm::errs() << "TargetMachine can't emit a file of this type";
         return false;
     }
 
-    pass.run(*module);
+    PM.run(*module);
     dest.close();
     
     llvm::errs() << "Object file has been generated: " << filename << "\n";

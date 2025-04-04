@@ -7,4 +7,8 @@ void NumberExpr::accept(ASTVisitor& visitor) {
 
 void BinaryExpr::accept(ASTVisitor& visitor) {
     visitor.visitBinaryExpr(this);
+}
+
+void PrintExpr::accept(ASTVisitor& visitor) {
+    visitor.visitPrintExpr(this);
 } 
