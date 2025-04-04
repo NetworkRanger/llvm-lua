@@ -1,5 +1,6 @@
 #pragma once
 #include "Lexer.h"
+#include <llvm/Support/raw_ostream.h>
 #include <memory>
 #include <vector>
 

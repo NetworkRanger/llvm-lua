@@ -31,7 +31,18 @@ make -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2)
 # 检查编译结果
 if [ $? -eq 0 ]; then
     echo "编译成功！"
-    echo "可执行文件位置: $(pwd)/bin/luac"
+    
+    # 创建lua目录（如果不存在）
+    cd ..
+    mkdir -p lua
+    
+    # 拷贝luac到lua目录
+    cp build/bin/luac lua/
+    
+    # 设置可执行权限
+    chmod +x lua/luac
+    
+    echo "可执行文件已拷贝到: $(pwd)/lua/luac"
 else
     echo "编译失败！"
     exit 1

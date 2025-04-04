@@ -1,5 +1,6 @@
 #include "Parser.h"
 #include "AST.h"
+#include <llvm/Support/raw_ostream.h>
 #include <stdexcept>
 
 Parser::Parser(Lexer& lexer) : lexer(lexer) {
@@ -12,7 +13,8 @@ void Parser::advance() {
 
 void Parser::expect(TokenType type) {
     if (currentToken.type != type) {
-        throw std::runtime_error("Unexpected token");
+        llvm::errs() << "Error: Unexpected token\n";
+        std::exit(1);
     }
     advance();
 }
@@ -56,5 +58,7 @@ std::unique_ptr<ASTNode> Parser::parsePrimary() {
         return expr;
     }
     
-    throw std::runtime_error("Unexpected token in primary expression");
+    llvm::errs() << "Error: Unexpected token in primary expression\n";
+    std::exit(1);
+    return nullptr;
 } 
