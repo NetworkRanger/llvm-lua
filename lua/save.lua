@@ -1,6 +1,3 @@
-$debug
-
-
 function savevar (n,v)
  if v = nil then return end;
  if type(v) = "number" then print(n.."="..v) return end

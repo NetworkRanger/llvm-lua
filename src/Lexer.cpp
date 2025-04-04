@@ -1,148 +1,235 @@
 #include "Lexer.h"
 #include <cctype>
-#include <unordered_map>
+#include <iostream>
+#include <map>
 
-static std::unordered_map<std::string, TokenType> keywords = {
-    {"and", TOKEN_AND},
-    {"break", TOKEN_BREAK},
-    {"do", TOKEN_DO},
-    {"else", TOKEN_ELSE},
-    {"elseif", TOKEN_ELSEIF},
-    {"end", TOKEN_END},
-    {"false", TOKEN_FALSE},
-    {"for", TOKEN_FOR},
-    {"function", TOKEN_FUNCTION},
-    {"if", TOKEN_IF},
-    {"in", TOKEN_IN},
-    {"local", TOKEN_LOCAL},
-    {"nil", TOKEN_NIL},
-    {"not", TOKEN_NOT},
-    {"or", TOKEN_OR},
-    {"repeat", TOKEN_REPEAT},
-    {"return", TOKEN_RETURN},
-    {"then", TOKEN_THEN},
-    {"true", TOKEN_TRUE},
-    {"until", TOKEN_UNTIL},
-    {"while", TOKEN_WHILE},
-    {"print", TOKEN_PRINT},
-};
+// 初始化关键字表
+std::map<std::string, TokenType> Lexer::keywords;
+
+void Lexer::initKeywords() {
+    keywords["and"] = TokenType::TOKEN_AND;
+    keywords["break"] = TokenType::TOKEN_BREAK;
+    keywords["do"] = TokenType::TOKEN_DO;
+    keywords["else"] = TokenType::TOKEN_ELSE;
+    keywords["elseif"] = TokenType::TOKEN_ELSEIF;
+    keywords["end"] = TokenType::TOKEN_END;
+    keywords["false"] = TokenType::TOKEN_FALSE;
+    keywords["for"] = TokenType::TOKEN_FOR;
+    keywords["function"] = TokenType::TOKEN_FUNCTION;
+    keywords["if"] = TokenType::TOKEN_IF;
+    keywords["in"] = TokenType::TOKEN_IN;
+    keywords["local"] = TokenType::TOKEN_LOCAL;
+    keywords["nil"] = TokenType::TOKEN_NIL;
+    keywords["not"] = TokenType::TOKEN_NOT;
+    keywords["or"] = TokenType::TOKEN_OR;
+    keywords["repeat"] = TokenType::TOKEN_REPEAT;
+    keywords["return"] = TokenType::TOKEN_RETURN;
+    keywords["then"] = TokenType::TOKEN_THEN;
+    keywords["true"] = TokenType::TOKEN_TRUE;
+    keywords["until"] = TokenType::TOKEN_UNTIL;
+    keywords["while"] = TokenType::TOKEN_WHILE;
+}
 
 Lexer::Lexer(const std::string& source) 
-    : source(source), currentPos(0), line(1), column(1) {}
-
-char Lexer::peek() {
-    if (currentPos >= source.length()) {
-        return '\0';
+    : source(source)
+    , currentPos(0)
+    , startPos(0)
+    , line(1)
+    , column(1)
+    , current(source.empty() ? '\0' : source[0]) {
+    if (keywords.empty()) {
+        initKeywords();
     }
-    return source[currentPos];
 }
 
 char Lexer::advance() {
-    char current = peek();
-    if (current != '\0') {
-        currentPos++;
-        if (current == '\n') {
-            line++;
-            column = 1;
-        } else {
-            column++;
-        }
+    if (current == '\n') {
+        line++;
+        column = 1;
+    } else {
+        column++;
     }
+    
+    currentPos++;
+    current = currentPos < source.length() ? source[currentPos] : '\0';
     return current;
 }
 
+char Lexer::peek() const {
+    if (currentPos + 1 >= source.length()) return '\0';
+    return source[currentPos + 1];
+}
+
+bool Lexer::match(char expected) {
+    if (current != expected) return false;
+    advance();
+    return true;
+}
+
 void Lexer::skipWhitespace() {
-    while (isspace(peek())) {
+    while (true) {
+        switch (current) {
+            case ' ':
+            case '\r':
+            case '\t':
+                advance();
+                break;
+            case '\n':
+                advance();
+                break;
+            case '-':
+                if (peek() == '-') {
+                    skipComment();
+                } else {
+                    return;
+                }
+                break;
+            default:
+                return;
+        }
+    }
+}
+
+void Lexer::skipComment() {
+    // 跳过 --
+    advance();
+    advance();
+    
+    // 跳过到行尾
+    while (current != '\n' && current != '\0') {
         advance();
     }
 }
 
-Token Lexer::readNumber() {
-    std::string number;
-    while (isdigit(peek()) || peek() == '.') {
-        number += advance();
-    }
-    
-    return Token{TOKEN_NUMBER, number, line, column - static_cast<int>(number.length())};
+Token Lexer::makeToken(TokenType type) const {
+    std::string text = source.substr(startPos, currentPos - startPos);
+    return Token(type, text, line, column - (currentPos - startPos));
 }
 
-Token Lexer::readIdentifier() {
-    std::string identifier;
-    while (isalnum(peek()) || peek() == '_') {
-        identifier += advance();
-    }
-    
-    auto it = keywords.find(identifier);
-    if (it != keywords.end()) {
-        return Token{it->second, identifier, line, column - static_cast<int>(identifier.length())};
-    }
-    
-    return Token{TOKEN_IDENTIFIER, identifier, line, column - static_cast<int>(identifier.length())};
+Token Lexer::makeToken(TokenType type, const std::string& value) const {
+    return Token(type, value, line, column - value.length());
 }
 
-Token Lexer::readString() {
-    std::string str;
-    advance(); // Skip opening quote
+Token Lexer::errorToken(const std::string& message) const {
+    return Token(TokenType::TOKEN_ERROR, message, line, column);
+}
+
+Token Lexer::number() {
+    while (isdigit(current)) advance();
     
-    while (peek() != '"' && peek() != '\0') {
-        if (peek() == '\\') {
-            advance();
-            switch (peek()) {
-                case 'n': str += '\n'; break;
-                case 't': str += '\t'; break;
-                case 'r': str += '\r'; break;
-                default: str += peek(); break;
-            }
-        } else {
-            str += peek();
+    // 处理小数点
+    if (current == '.' && isdigit(peek())) {
+        advance(); // 消费 '.'
+        while (isdigit(current)) advance();
+    }
+    
+    return makeToken(TokenType::TOKEN_NUMBER);
+}
+
+Token Lexer::string() {
+    advance(); // 消费开始的引号
+    
+    startPos = currentPos;
+    while (current != '"' && current != '\0') {
+        if (current == '\\') {
+            advance(); // 跳过转义字符
         }
         advance();
     }
     
-    if (peek() == '"') {
-        advance(); // Skip closing quote
+    if (current == '\0') {
+        return errorToken("Unterminated string");
     }
     
-    return Token{TOKEN_STRING, str, line, column - static_cast<int>(str.length()) - 2};
+    std::string value = source.substr(startPos, currentPos - startPos);
+    advance(); // 消费结束的引号
+    
+    return makeToken(TokenType::TOKEN_STRING, value);
+}
+
+Token Lexer::identifier() {
+    while (isalnum(current) || current == '_') advance();
+    
+    std::string text = source.substr(startPos, currentPos - startPos);
+    
+    // 检查是否是关键字
+    auto it = keywords.find(text);
+    TokenType type = it != keywords.end() ? it->second : TokenType::TOKEN_IDENTIFIER;
+    
+    return makeToken(type);
 }
 
 Token Lexer::getNextToken() {
     skipWhitespace();
     
-    char c = peek();
-    if (c == '\0') {
-        return Token{TOKEN_EOF, "", line, column};
-    }
+    startPos = currentPos;
     
-    if (isdigit(c)) {
-        return readNumber();
-    }
+    if (current == '\0') return makeToken(TokenType::TOKEN_EOF);
     
-    if (isalpha(c) || c == '_') {
-        return readIdentifier();
-    }
+    // 标识符
+    if (isalpha(current) || current == '_') 
+        return identifier();
     
-    if (c == '"') {
-        return readString();
+    // 数字
+    if (isdigit(current)) 
+        return number();
+    
+    // 字符串
+    if (current == '"') 
+        return string();
+    
+    // 单字符token
+    switch (current) {
+        case '(': advance(); return makeToken(TokenType::TOKEN_LPAREN);
+        case ')': advance(); return makeToken(TokenType::TOKEN_RPAREN);
+        case '{': advance(); return makeToken(TokenType::TOKEN_LBRACE);
+        case '}': advance(); return makeToken(TokenType::TOKEN_RBRACE);
+        case ',': advance(); return makeToken(TokenType::TOKEN_COMMA);
+        case '.': advance(); return makeToken(TokenType::TOKEN_DOT);
+        case '-': advance(); return makeToken(TokenType::TOKEN_MINUS);
+        case '+': advance(); return makeToken(TokenType::TOKEN_PLUS);
+        case ';': advance(); return makeToken(TokenType::TOKEN_SEMICOLON);
+        case '*': advance(); return makeToken(TokenType::TOKEN_MULT);
+        case '/': advance(); return makeToken(TokenType::TOKEN_DIV);
+        
+        // 双字符token
+        case '=':
+            if (match('=')) return makeToken(TokenType::TOKEN_EQ);
+            advance();
+            return makeToken(TokenType::TOKEN_ASSIGN);
+        case '~':
+            if (match('=')) return makeToken(TokenType::TOKEN_NE);
+            return errorToken("Unexpected character");
+        case '<':
+            if (match('=')) return makeToken(TokenType::TOKEN_LE);
+            advance();
+            return makeToken(TokenType::TOKEN_LT);
+        case '>':
+            if (match('=')) return makeToken(TokenType::TOKEN_GE);
+            advance();
+            return makeToken(TokenType::TOKEN_GT);
     }
     
     advance();
-    switch (c) {
-        case '+': return Token{TOKEN_PLUS, "+", line, column - 1};
-        case '-': return Token{TOKEN_MINUS, "-", line, column - 1};
-        case '*': return Token{TOKEN_MULT, "*", line, column - 1};
-        case '/': return Token{TOKEN_DIV, "/", line, column - 1};
-        case '(': return Token{TOKEN_LPAREN, "(", line, column - 1};
-        case ')': return Token{TOKEN_RPAREN, ")", line, column - 1};
-        case '=':
-            if (peek() == '=') {
-                advance();
-                return Token{TOKEN_EQ, "==", line, column - 2};
-            }
-            return Token{TOKEN_ASSIGN, "=", line, column - 1};
+    return errorToken("Unexpected character");
+}
+
+std::vector<Token> Lexer::scanTokens() {
+    std::vector<Token> tokens;
+    
+    while (!isAtEnd()) {
+        startPos = currentPos;
+        Token token = getNextToken();
+        tokens.push_back(token);
+        
+        if (token.getType() == TokenType::TOKEN_EOF) {
+            break;
+        }
     }
     
-    // 处理错误情况
-    std::string invalid(1, c);
-    return Token{TOKEN_EOF, "Unexpected character: " + invalid, line, column - 1};
+    return tokens;
+}
+
+bool Lexer::isAtEnd() const {
+    return currentPos >= source.length();
 } 
