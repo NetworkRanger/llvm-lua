@@ -149,3 +149,6 @@ retorno_multiplo()
     - 改进错误恢复机制
     - 添加更多内置函数支持
 
+
+## 参考
+Lua 1.0解析器 https://github.com/zlua/lua-1.0

@@ -11,6 +11,13 @@
 #include <llvm/TargetParser/Host.h>
 #include <system_error>
 #include <iostream>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/ExecutionEngine/MCJIT.h>
+
+CodeGenerator::~CodeGenerator() = default;
 
 void CodeGenerator::declarePrintf() {
     // 声明printf函数
@@ -44,7 +51,7 @@ void CodeGenerator::generateCode(Stmt* root) {
     if (auto* blockStmt = dynamic_cast<BlockStmt*>(root)) {
         for (const auto& stmt : blockStmt->getStatements()) {
             if (auto* funcDecl = dynamic_cast<FunctionDecl*>(stmt.get())) {
-                visitFunctionDecl(funcDecl);
+                visit(funcDecl);
             }
         }
     }
@@ -146,27 +153,27 @@ void CodeGenerator::collectFunctionDeclarations(Stmt* node) {
     }
 }
 
-void CodeGenerator::visitNumberExpr(NumberExpr* node) {
+void CodeGenerator::visit(NumberExpr* node) {
     lastValue = llvm::ConstantFP::get(*context, llvm::APFloat(node->getValue()));
 }
 
-void CodeGenerator::visitBinaryExpr(BinaryExpr* node) {
+void CodeGenerator::visit(BinaryExpr* node) {
     node->getLeft()->accept(*this);
     llvm::Value* L = lastValue;
     node->getRight()->accept(*this);
     llvm::Value* R = lastValue;
     
     switch (node->getOp()) {
-        case TokenType::TOKEN_PLUS:
+        case BinaryOp::ADD:
             lastValue = builder->CreateFAdd(L, R, "addtmp");
             break;
-        case TokenType::TOKEN_MINUS:
+        case BinaryOp::SUB:
             lastValue = builder->CreateFSub(L, R, "subtmp");
             break;
-        case TokenType::TOKEN_MULT:
+        case BinaryOp::MUL:
             lastValue = builder->CreateFMul(L, R, "multmp");
             break;
-        case TokenType::TOKEN_DIV:
+        case BinaryOp::DIV:
             lastValue = builder->CreateFDiv(L, R, "divtmp");
             break;
         default:
@@ -174,7 +181,7 @@ void CodeGenerator::visitBinaryExpr(BinaryExpr* node) {
     }
 }
 
-void CodeGenerator::visitPrintExpr(PrintExpr* node) {
+void CodeGenerator::visit(PrintExpr* node) {
     // 生成要打印的表达式的代码
     node->getExpr()->accept(*this);
     llvm::Value* exprValue = lastValue;
@@ -209,7 +216,7 @@ void CodeGenerator::visitPrintExpr(PrintExpr* node) {
     builder->CreateCall(printf, args);
 }
 
-void CodeGenerator::visitIfStmt(IfStmt* node) {
+void CodeGenerator::visit(IfStmt* node) {
     llvm::Function* function = builder->GetInsertBlock()->getParent();
     
     llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(*context, "then", function);
@@ -241,7 +248,7 @@ void CodeGenerator::visitIfStmt(IfStmt* node) {
     builder->SetInsertPoint(mergeBB);
 }
 
-void CodeGenerator::visitWhileStmt(WhileStmt* node) {
+void CodeGenerator::visit(WhileStmt* node) {
     llvm::Function* function = builder->GetInsertBlock()->getParent();
     
     llvm::BasicBlock* condBB = llvm::BasicBlock::Create(*context, "whilecond", function);
@@ -266,7 +273,7 @@ void CodeGenerator::visitWhileStmt(WhileStmt* node) {
     builder->SetInsertPoint(afterBB);
 }
 
-void CodeGenerator::visitRepeatStmt(RepeatStmt* node) {
+void CodeGenerator::visit(RepeatStmt* node) {
     llvm::Function* function = builder->GetInsertBlock()->getParent();
     
     llvm::BasicBlock* bodyBB = llvm::BasicBlock::Create(*context, "repeatbody", function);
@@ -291,7 +298,7 @@ void CodeGenerator::visitRepeatStmt(RepeatStmt* node) {
     builder->SetInsertPoint(afterBB);
 }
 
-void CodeGenerator::visitFunctionDecl(FunctionDecl* node) {
+void CodeGenerator::visit(FunctionDecl* node) {
     std::string name = node->getName();
     
     // 获取已声明的函数
@@ -338,7 +345,7 @@ void CodeGenerator::visitFunctionDecl(FunctionDecl* node) {
     }
 }
 
-void CodeGenerator::visitReturnStmt(ReturnStmt* node) {
+void CodeGenerator::visit(ReturnStmt* node) {
     if (!currentFunction) {
         throw std::runtime_error("Return statement outside of function");
     }
@@ -385,7 +392,7 @@ void CodeGenerator::visitReturnStmt(ReturnStmt* node) {
     }
 }
 
-void CodeGenerator::visitLocalVarDecl(LocalVarDecl* node) {
+void CodeGenerator::visit(LocalVarDecl* node) {
     if (node->getInitializer()) {
         node->getInitializer()->accept(*this);
         llvm::AllocaInst* alloca = builder->CreateAlloca(
@@ -394,26 +401,26 @@ void CodeGenerator::visitLocalVarDecl(LocalVarDecl* node) {
     }
 }
 
-void CodeGenerator::visitStringExpr(StringExpr* node) {
+void CodeGenerator::visit(StringExpr* node) {
     llvm::Value* str = builder->CreateGlobalString(node->getValue());
     lastValue = builder->CreatePointerCast(str, 
         llvm::PointerType::get(builder->getInt8Ty(), 0));
 }
 
-void CodeGenerator::visitNilExpr(NilExpr* node) {
+void CodeGenerator::visit(NilExpr* node) {
     lastValue = llvm::ConstantFP::get(*context, llvm::APFloat(0.0));
 }
 
-void CodeGenerator::visitUnaryExpr(UnaryExpr* node) {
+void CodeGenerator::visit(UnaryExpr* node) {
     node->getExpr()->accept(*this);
     llvm::Value* exprValue = lastValue;
     
     switch (node->getOp()) {
-        case TokenType::TOKEN_NOT:
+        case UnaryOp::NOT_OP:
             lastValue = builder->CreateFCmpOEQ(
                 exprValue, llvm::ConstantFP::get(*context, llvm::APFloat(0.0)));
             break;
-        case TokenType::TOKEN_MINUS:
+        case UnaryOp::NEG:
             lastValue = builder->CreateFNeg(exprValue);
             break;
         default:
@@ -421,9 +428,10 @@ void CodeGenerator::visitUnaryExpr(UnaryExpr* node) {
     }
 }
 
-void CodeGenerator::visitExprStmt(ExprStmt* node) {
-    node->getExpr()->accept(*this);
-    // 表达式语句不需要保存结果
+void CodeGenerator::visit(ExprStmt* node) {
+    if (node->getExpr()) {
+        node->getExpr()->accept(*this);
+    }
 }
 
 void CodeGenerator::saveModuleToFile(const std::string& filename) {
@@ -448,7 +456,7 @@ void CodeGenerator::saveModuleToFile(const std::string& filename) {
     dest.close();
 }
 
-void CodeGenerator::visitCallExpr(CallExpr* node) {
+void CodeGenerator::visit(CallExpr* node) {
     std::string calleeName = node->getCallee();
     llvm::Function* callee = module->getFunction(calleeName);
     
@@ -503,7 +511,7 @@ void CodeGenerator::visitCallExpr(CallExpr* node) {
     lastValue = builder->CreateCall(callee, args, calleeName + "_result");
 }
 
-void CodeGenerator::visitVarExpr(VarExpr* expr) {
+void CodeGenerator::visit(VarExpr* expr) {
     llvm::AllocaInst* alloca = namedValues[expr->getName()];
     if (!alloca) {
         throw std::runtime_error("Unknown variable: " + expr->getName());
@@ -511,7 +519,7 @@ void CodeGenerator::visitVarExpr(VarExpr* expr) {
     lastValue = builder->CreateLoad(alloca->getAllocatedType(), alloca, expr->getName().c_str());
 }
 
-void CodeGenerator::visitBlockStmt(BlockStmt* node) {
+void CodeGenerator::visit(BlockStmt* node) {
     for (const auto& stmt : node->getStatements()) {
         stmt->accept(*this);
     }

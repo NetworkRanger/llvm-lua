@@ -1,65 +1,68 @@
-#ifndef AST_H
-#define AST_H
+#pragma once
 
 #include <string>
 #include <vector>
-#include "Lexer.h"
 #include <memory>
+#include "Visitor.h"
 
-// 先声明所有需要的类
-class Expr;
-class Stmt;
-class NumberExpr;
-class BinaryExpr;
-class UnaryExpr;
-class PrintExpr;
-class ExprStmt;
-class IfStmt;
-class WhileStmt;
-class RepeatStmt;
-class FunctionDecl;
-class ReturnStmt;
-class LocalVarDecl;
-class StringExpr;
-class NilExpr;
-class CallExpr;
-class VarExpr;
-class BlockStmt;
+// 二元操作符
+enum class BinaryOp {
+    ADD, SUB, MUL, DIV, MOD,
+    EQ, NEQ, LT, LT_EQ, GT, GT_EQ,
+    AND_OP, OR_OP, CONCAT
+};
 
-// 将 ASTVisitor 的定义移到前面
-class ASTVisitor {
+// 一元操作符
+enum class UnaryOp {
+    NEG, NOT_OP, LEN
+};
+
+// AST 基类
+class Node {
 public:
-    virtual ~ASTVisitor() = default;
-    virtual void visitNumberExpr(NumberExpr* expr) = 0;
-    virtual void visitBinaryExpr(BinaryExpr* expr) = 0;
-    virtual void visitUnaryExpr(UnaryExpr* expr) = 0;
-    virtual void visitStringExpr(StringExpr* expr) = 0;
-    virtual void visitNilExpr(NilExpr* expr) = 0;
-    virtual void visitExprStmt(ExprStmt* stmt) = 0;
-    virtual void visitPrintExpr(PrintExpr* expr) = 0;
-    virtual void visitIfStmt(IfStmt* stmt) = 0;
-    virtual void visitWhileStmt(WhileStmt* stmt) = 0;
-    virtual void visitRepeatStmt(RepeatStmt* stmt) = 0;
-    virtual void visitReturnStmt(ReturnStmt* stmt) = 0;
-    virtual void visitLocalVarDecl(LocalVarDecl* stmt) = 0;
-    virtual void visitBlockStmt(BlockStmt* stmt) = 0;
-    virtual void visitFunctionDecl(FunctionDecl* stmt) = 0;
-    virtual void visitCallExpr(CallExpr* expr) = 0;
-    virtual void visitVarExpr(VarExpr* expr) = 0;
+    virtual ~Node() = default;
 };
 
 // 表达式基类
-class Expr {
+class Expr : public Node {
 public:
     virtual ~Expr() = default;
-    virtual void accept(ASTVisitor& visitor) = 0;
+    virtual void accept(Visitor& visitor) = 0;
 };
 
 // 语句基类
-class Stmt {
+class Stmt : public Node {
 public:
     virtual ~Stmt() = default;
-    virtual void accept(ASTVisitor& visitor) = 0;
+    virtual void accept(Visitor& visitor) = 0;
+};
+
+// 块语句
+class BlockStmt : public Stmt {
+    std::vector<std::unique_ptr<Stmt>> statements;
+public:
+    BlockStmt(std::vector<std::unique_ptr<Stmt>> stmts)
+        : statements(std::move(stmts)) {}
+    
+    const std::vector<std::unique_ptr<Stmt>>& getStatements() const { return statements; }
+    void accept(Visitor& visitor) override { visitor.visit(this); }
+};
+
+// 二元表达式
+class BinaryExpr : public Expr {
+    std::unique_ptr<Expr> left;
+    BinaryOp op;
+    std::unique_ptr<Expr> right;
+public:
+    BinaryExpr(BinaryOp o, std::unique_ptr<Expr> l, std::unique_ptr<Expr> r)
+        : op(o), left(std::move(l)), right(std::move(r)) {}
+    
+    Expr* getLeft() { return left.get(); }
+    Expr* getRight() { return right.get(); }
+    BinaryOp getOp() const { return op; }
+    void accept(Visitor& visitor) override {
+        visitor.visit(this);
+    }
 };
 
 // 数字表达式
@@ -68,23 +71,10 @@ private:
     double value;
 public:
     NumberExpr(double v) : value(v) {}
-    void accept(ASTVisitor& visitor) override;
+    void accept(Visitor& visitor) override {
+        visitor.visit(this);
+    }
     double getValue() const { return value; }
-};
-
-// 二元表达式
-class BinaryExpr : public Expr {
-    std::unique_ptr<Expr> left;
-    TokenType op;
-    std::unique_ptr<Expr> right;
-public:
-    BinaryExpr(std::unique_ptr<Expr> l, TokenType o, std::unique_ptr<Expr> r)
-        : left(std::move(l)), op(o), right(std::move(r)) {}
-    
-    Expr* getLeft() const { return left.get(); }
-    TokenType getOp() const { return op; }
-    Expr* getRight() const { return right.get(); }
-    void accept(ASTVisitor& visitor) override;
 };
 
 // 打印表达式
@@ -92,8 +82,10 @@ class PrintExpr : public Stmt {
     std::unique_ptr<Expr> expr;
 public:
     PrintExpr(std::unique_ptr<Expr> e) : expr(std::move(e)) {}
-    Expr* getExpr() const { return expr.get(); }
-    void accept(ASTVisitor& visitor) override;
+    Expr* getExpr() { return expr.get(); }
+    void accept(Visitor& visitor) override {
+        visitor.visit(this);
+    }
 };
 
 // if语句
@@ -107,10 +99,12 @@ public:
         , thenBranch(std::move(then))
         , elseBranch(std::move(els)) {}
     
-    Expr* getCondition() const { return condition.get(); }
-    Stmt* getThenBranch() const { return thenBranch.get(); }
-    Stmt* getElseBranch() const { return elseBranch.get(); }
-    void accept(ASTVisitor& visitor) override;
+    Expr* getCondition() { return condition.get(); }
+    Stmt* getThenBranch() { return thenBranch.get(); }
+    Stmt* getElseBranch() { return elseBranch.get(); }
+    void accept(Visitor& visitor) override {
+        visitor.visit(this);
+    }
 };
 
 // while语句
@@ -123,7 +117,7 @@ public:
     
     Expr* getCondition() const { return condition.get(); }
     Stmt* getBody() const { return body.get(); }
-    void accept(ASTVisitor& visitor) override;
+    void accept(Visitor& visitor) override;
 };
 
 // repeat语句
@@ -136,7 +130,7 @@ public:
     
     Expr* getCondition() const { return condition.get(); }
     Stmt* getBody() const { return body.get(); }
-    void accept(ASTVisitor& visitor) override;
+    void accept(Visitor& visitor) override;
 };
 
 // 函数声明
@@ -153,18 +147,16 @@ public:
     const std::string& getName() const { return name; }
     const std::vector<std::string>& getParams() const { return params; }
     const std::vector<std::unique_ptr<Stmt>>& getBody() const { return body; }
-    void accept(ASTVisitor& visitor) override;
+    void accept(Visitor& visitor) override;
 };
 
 // return语句
 class ReturnStmt : public Stmt {
     std::vector<std::unique_ptr<Expr>> values;
 public:
-    ReturnStmt(std::vector<std::unique_ptr<Expr>> v = std::vector<std::unique_ptr<Expr>>())
-        : values(std::move(v)) {}
-    
+    ReturnStmt(std::vector<std::unique_ptr<Expr>> v) : values(std::move(v)) {}
     const std::vector<std::unique_ptr<Expr>>& getValues() const { return values; }
-    void accept(ASTVisitor& visitor) override;
+    void accept(Visitor& visitor) override;
 };
 
 // 局部变量声明
@@ -177,7 +169,7 @@ public:
     
     const std::string& getName() const { return name; }
     Expr* getInitializer() const { return initializer.get(); }
-    void accept(ASTVisitor& visitor) override;
+    void accept(Visitor& visitor) override;
 };
 
 // 字符串表达式
@@ -186,27 +178,33 @@ private:
     std::string value;
 public:
     StringExpr(const std::string& v) : value(v) {}
-    void accept(ASTVisitor& visitor) override;
+    void accept(Visitor& visitor) override {
+        visitor.visit(this);
+    }
     const std::string& getValue() const { return value; }
 };
 
 // nil表达式
 class NilExpr : public Expr {
 public:
-    void accept(ASTVisitor& visitor) override;
+    void accept(Visitor& visitor) override {
+        visitor.visit(this);
+    }
 };
 
 // 一元表达式
 class UnaryExpr : public Expr {
-    TokenType op;
+    UnaryOp op;
     std::unique_ptr<Expr> expr;
 public:
-    UnaryExpr(TokenType o, std::unique_ptr<Expr> e)
+    UnaryExpr(UnaryOp o, std::unique_ptr<Expr> e)
         : op(o), expr(std::move(e)) {}
     
-    TokenType getOp() const { return op; }
+    UnaryOp getOp() const { return op; }
     Expr* getExpr() const { return expr.get(); }
-    void accept(ASTVisitor& visitor) override;
+    void accept(Visitor& visitor) override {
+        visitor.visit(this);
+    }
 };
 
 // 表达式语句
@@ -214,8 +212,8 @@ class ExprStmt : public Stmt {
     std::unique_ptr<Expr> expr;
 public:
     ExprStmt(std::unique_ptr<Expr> e) : expr(std::move(e)) {}
-    Expr* getExpr() const { return expr.get(); }
-    void accept(ASTVisitor& visitor) override;
+    Expr* getExpr() { return expr.get(); }
+    void accept(Visitor& visitor) override;
 };
 
 class CallExpr : public Expr {
@@ -227,7 +225,9 @@ public:
     
     const std::string& getCallee() const { return callee; }
     const std::vector<std::unique_ptr<Expr>>& getArguments() const { return arguments; }
-    void accept(ASTVisitor& visitor) override;
+    void accept(Visitor& visitor) override {
+        visitor.visit(this);
+    }
 };
 
 class VarExpr : public Expr {
@@ -237,19 +237,7 @@ public:
     
     const std::string& getName() const { return name; }
     
-    void accept(ASTVisitor& visitor) override;
-};
-
-// 添加块语句类
-class BlockStmt : public Stmt {
-    std::vector<std::unique_ptr<Stmt>> statements;
-    
-public:
-    BlockStmt(std::vector<std::unique_ptr<Stmt>> stmts)
-        : statements(std::move(stmts)) {}
-    
-    const std::vector<std::unique_ptr<Stmt>>& getStatements() const { return statements; }
-    void accept(ASTVisitor& visitor) override;
-};
-
-#endif // AST_H 
+    void accept(Visitor& visitor) override {
+        visitor.visit(this);
+    }
+}; 

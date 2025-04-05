@@ -1,65 +1,52 @@
-#ifndef CODEGEN_H
-#define CODEGEN_H
+#pragma once
 
-#include "AST.h"
 #include <llvm/IR/Module.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Type.h>
-#include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/Value.h>
-#include <memory>
-#include <string>
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/Support/TargetSelect.h>
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include <llvm/ExecutionEngine/MCJIT.h>
+#include <map>
+#include "AST.h"
 
-class CodeGenerator : public ASTVisitor {
+class CodeGenerator : public Visitor {
+public:
+    CodeGenerator();
+    ~CodeGenerator();
+
+    void generateCode(Stmt* root);
+    void saveModuleToFile(const std::string& filename);
+    void executeCode();
+
 private:
     std::unique_ptr<llvm::LLVMContext> context;
     std::unique_ptr<llvm::Module> module;
     std::unique_ptr<llvm::IRBuilder<>> builder;
     llvm::Value* lastValue;
+    std::map<std::string, llvm::AllocaInst*> namedValues;
+    llvm::Function* currentFunction;
     llvm::Function* printfFunc;
-    llvm::Function* currentFunction;  // 当前正在处理的函数
-    std::map<std::string, llvm::AllocaInst*> namedValues;  // 变量名到alloca的映射
-    
-    bool hasMultipleReturns(FunctionDecl* node);
-    
-    void declarePrintf();
-    
-    llvm::AllocaInst* createEntryBlockAlloca(llvm::Function* function,
-                                            const std::string& varName);
-    
-    void collectFunctionDeclarations(Stmt* node);
-    
-    void initBuiltins();
-    
-public:
-    CodeGenerator();
-    void generateCode(Stmt* root);
-    void saveModuleToFile(const std::string& filename);
-    void executeCode();
-    
-    // 实现所有ASTVisitor接口
-    void visitNumberExpr(NumberExpr* node) override;
-    void visitBinaryExpr(BinaryExpr* node) override;
-    void visitUnaryExpr(UnaryExpr* node) override;
-    void visitPrintExpr(PrintExpr* node) override;
-    void visitExprStmt(ExprStmt* node) override;
-    void visitIfStmt(IfStmt* node) override;
-    void visitWhileStmt(WhileStmt* node) override;
-    void visitRepeatStmt(RepeatStmt* node) override;
-    void visitFunctionDecl(FunctionDecl* node) override;
-    void visitReturnStmt(ReturnStmt* node) override;
-    void visitLocalVarDecl(LocalVarDecl* node) override;
-    void visitStringExpr(StringExpr* node) override;
-    void visitNilExpr(NilExpr* node) override;
-    void visitCallExpr(CallExpr* expr) override;
-    void visitVarExpr(VarExpr* expr) override;
-    void visitBlockStmt(BlockStmt* stmt) override;
-};
 
-#endif // CODEGEN_H 
+    // 私有辅助方法
+    void declarePrintf();
+    void collectFunctionDeclarations(Stmt* node);
+    bool hasMultipleReturns(FunctionDecl* node);
+    llvm::AllocaInst* createEntryBlockAlloca(llvm::Function* function, const std::string& name);
+
+    // 添加辅助方法声明
+    void initBuiltins();
+
+    // 实现所有 Visitor 接口方法
+    void visit(BlockStmt* node) override;
+    void visit(FunctionDecl* node) override;
+    void visit(ReturnStmt* node) override;
+    void visit(IfStmt* node) override;
+    void visit(WhileStmt* node) override;
+    void visit(RepeatStmt* node) override;
+    void visit(ExprStmt* node) override;
+    void visit(BinaryExpr* node) override;
+    void visit(UnaryExpr* node) override;
+    void visit(NumberExpr* node) override;
+    void visit(StringExpr* node) override;
+    void visit(NilExpr* node) override;
+    void visit(VarExpr* node) override;
+    void visit(CallExpr* node) override;
+    void visit(PrintExpr* node) override;
+    void visit(LocalVarDecl* node) override;
+}; 

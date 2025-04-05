@@ -1,51 +1,51 @@
-#include "Lexer.h"
-#include "Parser.h"
-#include "CodeGen.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include "CodeGen.h"
+
+extern int yyparse();
+extern FILE* yyin;
+extern std::unique_ptr<BlockStmt> root;
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
         std::cerr << "Usage: " << argv[0] << " <input.lua>" << std::endl;
         return 1;
     }
-    
+
+    // 打开输入文件
+    FILE* input = fopen(argv[1], "r");
+    if (!input) {
+        std::cerr << "Error: Could not open input file: " << argv[1] << std::endl;
+        return 1;
+    }
+    yyin = input;
+
     try {
-        // 读取输入文件
-        std::ifstream file(argv[1]);
-        if (!file.is_open()) {
-            throw std::runtime_error("Could not open input file: " + std::string(argv[1]));
+        // 解析输入文件
+        if (yyparse() != 0) {
+            std::cerr << "Error: Parsing failed" << std::endl;
+            return 1;
         }
-        std::string source((std::istreambuf_iterator<char>(file)),
-                          std::istreambuf_iterator<char>());
-        
-        // 词法分析
-        Lexer lexer(source);
-        std::vector<Token> tokens = lexer.scanTokens();
-        
-        // 语法分析
-        Parser parser(tokens);
-        auto ast = parser.parse();
-        
-        // 代码生成
+
+        // 生成代码
         CodeGenerator codegen;
-        codegen.generateCode(ast.get());
-        
+        codegen.generateCode(root.get());
+
         // 获取输入文件的目录
-        std::string inputDir = std::string(argv[1]);
-        size_t lastSlash = inputDir.find_last_of("/\\");
+        std::string inputPath(argv[1]);
+        size_t lastSlash = inputPath.find_last_of("/\\");
+        std::string outputPath;
         if (lastSlash != std::string::npos) {
-            inputDir = inputDir.substr(0, lastSlash + 1);
+            outputPath = inputPath.substr(0, lastSlash + 1) + "output.ll";
         } else {
-            inputDir = "./";
+            outputPath = "output.ll";
         }
-        
-        // 保存生成的代码到与输入文件相同目录下的 output.ll
-        std::string outputFile = inputDir + "output.ll";
-        codegen.saveModuleToFile(outputFile);
-        
-        std::cout << "Successfully generated LLVM IR: " << outputFile << std::endl;
+
+        // 保存生成的代码
+        codegen.saveModuleToFile(outputPath);
+        std::cout << "Successfully generated LLVM IR: " << outputPath << std::endl;
+
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
