@@ -1,16 +1,151 @@
-# llvm-lua
-使用llvm编写lua编译器
+# LLVM-Lua 编译器
 
-## 构建
+这是一个基于 LLVM 的 Lua 语言编译器实现，支持将 Lua 代码编译成 LLVM IR，并可以直接执行。
 
-MacOS:
+## 功能特性
 
+### 1. 词法分析
+- 支持 Lua 基本词法元素的识别
+- 包括数字、字符串、标识符、关键字等
+- 提供准确的行号和列号跟踪
+- 错误处理和报告
+
+### 2. 语法分析
+- 实现了 Lua 语言主要语法特性的解析
+- 支持的语法结构：
+    - 函数定义和调用
+    - 变量声明和赋值
+    - 控制流语句（if、while、repeat）
+    - 表达式计算
+    - 多返回值
+
+### 3. 代码生成
+- 使用 LLVM IR 作为目标代码
+- 主要功能：
+    - 算术运算表达式
+    - 函数定义和调用
+    - 控制流程
+    - 变量作用域
+    - 内置函数（如 print）
+
+### 4. 特殊功能
+- 支持多返回值函数
+- 内置 print 函数实现
+- 支持基本的优化选项
+- 直接执行生成的代码
+
+## 技术细节
+
+### 主要组件
+
+1. **词法分析器 (Lexer)**
+    - 位于 `Lexer.h` 和 `Lexer.cpp`
+    - 实现词法分析和 Token 生成
+    - 支持源码位置跟踪
+
+2. **语法分析器 (Parser)**
+    - 位于 `Parser.h` 和 `Parser.cpp`
+    - 构建抽象语法树 (AST)
+    - 处理语法错误
+
+3. **抽象语法树 (AST)**
+    - 位于 `AST.h`
+    - 定义了所有语法节点类型
+    - 支持访问者模式
+
+4. **代码生成器 (CodeGenerator)**
+    - 位于 `CodeGen.h` 和 `CodeGen.cpp`
+    - 将 AST 转换为 LLVM IR
+    - 实现运行时支持
+
+### 支持的语法特性
+
+1. **表达式**
+    - 数值运算 (+, -, *, /)
+    - 一元运算符 (-, not)
+    - 函数调用
+    - 变量引用
+
+2. **语句**
+    - if-else 条件语句
+    - while 循环
+    - repeat-until 循环
+    - 函数定义
+    - return 语句
+    - 局部变量声明
+
+3. **函数**
+    - 支持多参数
+    - 支持多返回值
+    - 支持嵌套定义
+
+## 使用方法
+
+### 编译项目
 ```bash
-cmake -DLLVM_DIR=/opt/homebrew/opt/llvm/lib/cmake/llvm -DCMAKE_BUILD_TYPE=Release ..
+mkdir build
+cd build
+cmake ..
+make
 ```
 
-Ubuntu:
-
+### 运行编译器
 ```bash
-cmake -DLLVM_DIR=/usr/lib/llvm-11/cmake/ ..
+./luac input.lua
 ```
+
+### 示例代码
+```lua
+function somaP(x1, y1, x2, y2)
+  return x1+x2, y1+y2
+end
+
+function norma(x, y)
+  return x*x + y*y
+end
+
+function retorno_multiplo()
+  print(norma(somaP(2, 3, 4, 5)))
+end
+
+retorno_multiplo()
+```
+
+## 技术要求
+
+- LLVM 15.0 或更高版本
+- C++17 或更高版本
+- CMake 3.10 或更高版本
+
+## 实现细节
+
+### 代码生成策略
+1. **函数处理**
+    - 使用 LLVM 结构体类型处理多返回值
+    - 自动处理返回值类型转换
+
+2. **优化处理**
+    - 支持禁用优化以保持代码可读性
+    - 保留完整的函数实现
+
+3. **内存管理**
+    - 使用 `std::unique_ptr` 进行内存管理
+    - 确保资源的正确释放
+
+### 错误处理
+- 提供详细的编译错误信息
+- 支持运行时错误检测
+- 包含行号和列号信息
+
+## 限制和待改进
+1. 暂不支持的特性：
+    - 表（Table）数据结构
+    - 闭包
+    - 协程
+    - 元表
+
+2. 待优化项：
+    - 优化生成代码的性能
+    - 改进错误恢复机制
+    - 添加更多内置函数支持
+

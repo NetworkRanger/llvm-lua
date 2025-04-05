@@ -1,6 +1,5 @@
 #include "Lexer.h"
 #include <cctype>
-#include <iostream>
 #include <map>
 
 // 初始化关键字表
@@ -232,4 +231,4 @@ std::vector<Token> Lexer::scanTokens() {
 
 bool Lexer::isAtEnd() const {
     return currentPos >= source.length();
-} 
+}

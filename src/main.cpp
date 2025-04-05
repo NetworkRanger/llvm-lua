@@ -4,7 +4,6 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <llvm/Support/raw_os_ostream.h>
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {

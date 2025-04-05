@@ -20,9 +20,5 @@ rm -f *.a
 rm -f *.so
 rm -f *.dylib
 
-rm lua/hello
-rm lua/hello.i64
-rm lua/output.ll
-rm lua/output.o
 
 echo "清理完成！" 

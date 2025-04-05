@@ -47,3 +47,10 @@ luac.out
 
 build/
 ref/
+
+lua/*.id0
+lua/*.id1
+lua/*.nam
+lua/*.til
+lua/*.idb
+lua/*.i64
