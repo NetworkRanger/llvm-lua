@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
 project(llvm-lua)
 
 # 设置 C++ 标准
@@ -47,6 +47,17 @@ set(SOURCES
 
 # 创建可执行文件
 add_executable(luac ${SOURCES})
+
+set(LEXER_SOURCES
+        src/lexer_main.cpp
+        src/AST.cpp
+        src/ASTPrint.cpp
+        ${FLEX_Lexer_OUTPUTS}
+        ${BISON_Parser_OUTPUTS}
+)
+
+add_executable(luac-lexer ${LEXER_SOURCES})
+
 
 # 获取本地目标架构的LLVM组件
 execute_process(

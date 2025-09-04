@@ -166,6 +166,7 @@ class LocalVarDecl : public Stmt {
 public:
     LocalVarDecl(const std::string& n, std::unique_ptr<Expr> init = nullptr)
         : name(n), initializer(std::move(init)) {}
+    virtual ~LocalVarDecl() = default;
     
     const std::string& getName() const { return name; }
     Expr* getInitializer() const { return initializer.get(); }

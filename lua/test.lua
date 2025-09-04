@@ -8,6 +8,7 @@ end
 
 function retorno_multiplo ()
  print (norma(somaP(2,3,4,5)))
+ print("hello")
 end
 
 retorno_multiplo()
