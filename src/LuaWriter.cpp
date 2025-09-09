@@ -1,4 +1,4 @@
-#include "ASTPrint.h"
+#include "LuaWriter.h"
 #include <iostream>
 #include <cxxabi.h>   // __cxa_demangle
 #include <memory>
@@ -19,14 +19,12 @@ inline std::string demangle(const char* mangled) {
 template<typename T>
 std::string type_name(T) { return demangle(typeid(T).name()); }
 
-ASTPrint::~ASTPrint() = default;
-ASTPrint::ASTPrint() {
+LuaWriter::~LuaWriter() = default;
+LuaWriter::LuaWriter() {
 
 }
 
-void ASTPrint::printAST(Stmt* root) {
-    // 第一阶段：收集所有函数声明
-    collectFunctionDeclarations(root);
+void LuaWriter::write(Stmt* root) {
     
     // 第二阶段：生成所有函数的实现
     if (auto* blockStmt = dynamic_cast<BlockStmt*>(root)) {
@@ -49,38 +47,25 @@ void ASTPrint::printAST(Stmt* root) {
     }
 }
 
-// 添加函数声明收集方法
-void ASTPrint::collectFunctionDeclarations(Stmt* node) {
-    // 如果是块语句，递归处理所有语句
-    if (auto* blockStmt = dynamic_cast<BlockStmt*>(node)) {
-        std::cout << type_name(blockStmt)<< std::endl;
-
-        for (const auto& stmt : blockStmt->getStatements()) {
-            collectFunctionDeclarations(stmt.get());
-        }
-        return;
-    }
+void LuaWriter::visit(NumberExpr* node) {
+    std::cout << node->getValue();
 }
 
-void ASTPrint::visit(NumberExpr* node) {
-    std::cout << type_name(node) << ": " << node->getValue() << std::endl;
-}
-
-void ASTPrint::visit(BinaryExpr* node) {
+void LuaWriter::visit(BinaryExpr* node) {
     node->getLeft()->accept(*this);
 
     switch (node->getOp()) {
         case BinaryOp::ADD:
-            std::cout << '+' << std::endl;
+            std::cout << " + ";
             break;
         case BinaryOp::SUB:
-            std::cout << '-' << std::endl;
+            std::cout << " - ";
             break;
         case BinaryOp::MUL:
-            std::cout << '*' << std::endl;
+            std::cout << " * ";
             break;
         case BinaryOp::DIV:
-            std::cout << '/' << std::endl;
+            std::cout << " / ";
             break;
         default:
             throw std::runtime_error("Unknown binary operator");
@@ -90,14 +75,14 @@ void ASTPrint::visit(BinaryExpr* node) {
 
 }
 
-void ASTPrint::visit(PrintExpr* node) {
+void LuaWriter::visit(PrintExpr* node) {
     std::cout << type_name(node) << std::endl;
 
     // 生成要打印的表达式的代码
     node->getExpr()->accept(*this);
 }
 
-void ASTPrint::visit(IfStmt* node) {
+void LuaWriter::visit(IfStmt* node) {
     std::cout << type_name(node) << std::endl;
 
     
@@ -109,50 +94,60 @@ void ASTPrint::visit(IfStmt* node) {
     }
 }
 
-void ASTPrint::visit(WhileStmt* node) {
+void LuaWriter::visit(WhileStmt* node) {
     std::cout << type_name(node) << std::endl;
     node->getCondition()->accept(*this);
     node->getBody()->accept(*this);
 }
 
-void ASTPrint::visit(RepeatStmt* node) {
+void LuaWriter::visit(RepeatStmt* node) {
     std::cout << type_name(node) << std::endl;
     node->getBody()->accept(*this);
     node->getCondition()->accept(*this);
 }
 
-void ASTPrint::visit(FunctionDecl* node) {
+void LuaWriter::visit(FunctionDecl* node) {
     std::string name = node->getName();
-    std::cout << type_name(node) << ": " << name << std::endl;
+    std::cout << "function "  << name << "(";
     for(const auto& param : node->getParams()) {
-        std::cout << "Param: " << param << std::endl;
+        std::cout  << param;
+        if (&param != &node->getParams().back()) { // 如果不是最后一个参数，则添加逗号
+            std::cout << ", ";
+        }
     }
+    std::cout << ")" << std::endl;
     // 生成函数体
     for (const auto& stmt : node->getBody()) {
+        std::cout << "  ";
         stmt->accept(*this);
+        std::cout << std::endl;
     }
+    std::cout << "end" << std::endl << std::endl;
 }
 
-void ASTPrint::visit(ReturnStmt* node) {
-    std::cout << type_name(node) << std::endl;
+void LuaWriter::visit(ReturnStmt* node) {
+    std::cout << "return ";
     for (const auto& value : node->getValues()) {
         value->accept(*this);
+        if (&value != &node->getValues().back()) {
+            std::cout << ", ";
+        }
     }
 }
 
-void ASTPrint::visit(LocalVarDecl* node) {
+void LuaWriter::visit(LocalVarDecl* node) {
     std::cout << type_name(node) << std::endl;
 }
 
-void ASTPrint::visit(StringExpr* node) {
-    std::cout << type_name(node) << ": " << node->getValue() << std::endl;
+void LuaWriter::visit(StringExpr* node) {
+    std::cout << '"' << node->getValue() << '"';
 }
 
-void ASTPrint::visit(NilExpr* node) {
+void LuaWriter::visit(NilExpr* node) {
     std::cout << type_name(node) << std::endl;
 }
 
-void ASTPrint::visit(UnaryExpr* node) {
+void LuaWriter::visit(UnaryExpr* node) {
     std::cout << type_name(node) << std::endl;
     node->getExpr()->accept(*this);
 
@@ -169,32 +164,35 @@ void ASTPrint::visit(UnaryExpr* node) {
 
 }
 
-void ASTPrint::visit(ExprStmt* node) {
-    std::cout << type_name(node) << std::endl;
+void LuaWriter::visit(ExprStmt* node) {
     if (node->getExpr()) {
         node->getExpr()->accept(*this);
     }
 }
 
-void ASTPrint::visit(CallExpr* node) {
+void LuaWriter::visit(CallExpr* node) {
     std::string calleeName = node->getCallee();
-    std::cout << type_name(node) << std::endl;
-    std::cout << "Callee: " << calleeName << std::endl;
+    std::cout << calleeName << "(";
 
     std::vector<llvm::Value*> args;
     for (const auto& arg : node->getArguments()) {
         arg->accept(*this);
+        if (&arg != &node->getArguments().back()) {
+            std::cout << ", ";
+        }
     }
+
+    std::cout << ")";
 }
 
-void ASTPrint::visit(VarExpr* expr) {
-    std::cout << type_name(expr) << std::endl;
-    std::cout << "Name: " << expr->getName() << std::endl;
+void LuaWriter::visit(VarExpr* expr) {
+    std::cout << expr->getName();
 }
 
-void ASTPrint::visit(BlockStmt* node) {
+void LuaWriter::visit(BlockStmt* node) {
     std::cout << type_name(node) << std::endl;
     for (const auto& stmt : node->getStatements()) {
         stmt->accept(*this);
+        std::cout << std::endl;
     }
 }

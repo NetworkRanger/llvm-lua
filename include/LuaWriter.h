@@ -2,12 +2,12 @@
 
 #include "AST.h"
 
-class ASTPrint : public Visitor {
+class LuaWriter : public Visitor {
 public:
-    ASTPrint();
-    ~ASTPrint();
+    LuaWriter();
+    ~LuaWriter() override;
 
-    void printAST(Stmt* root);
+    void write(Stmt* root);
 
 private:
 

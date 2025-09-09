@@ -58,6 +58,16 @@ set(LEXER_SOURCES
 
 add_executable(luac-lexer ${LEXER_SOURCES})
 
+set(LUA_WRITER_SOURCES
+        src/lua_writer_main.cpp
+        src/AST.cpp
+        src/LuaWriter.cpp
+        ${FLEX_Lexer_OUTPUTS}
+        ${BISON_Parser_OUTPUTS}
+)
+
+add_executable(lua-writer ${LUA_WRITER_SOURCES})
+
 
 # 获取本地目标架构的LLVM组件
 execute_process(
