@@ -31,3 +31,12 @@ void LocalVarDecl::accept(Visitor& visitor) {
 	visitor.visit(this);
 }
 
+// AssignmentStmt 实现
+void AssignmentStmt::accept(Visitor& visitor) {
+	visitor.visit(this);
+}
+
+// ArrayAssignmentStmt 实现
+void ArrayAssignmentStmt::accept(Visitor& visitor) {
+	visitor.visit(this);
+}

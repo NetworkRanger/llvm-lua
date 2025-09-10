@@ -34,7 +34,7 @@ int line_number = 1;
 "<="            { return LE; }
 ">="            { return GE; }
 ".."            { return CONC; }
-
+"=="            { return EQ; }
 [0-9]+\.[0-9]+ { yylval.number = atof(yytext); return NUMBER; }
 [0-9]+         { yylval.number = atof(yytext); return NUMBER; }
 

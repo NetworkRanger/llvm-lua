@@ -51,4 +51,6 @@ private:
     void visit(PrintExpr* node) override;
     void visit(LocalVarDecl* node) override;
     void visit(ArrayAccessExpr* node) override;
+    void visit(AssignmentStmt* node) override;
+    void visit(ArrayAssignmentStmt* node) override;
 };

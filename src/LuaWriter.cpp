@@ -207,3 +207,16 @@ void LuaWriter::visit(ArrayAccessExpr* expr) {
     expr->getIndex()->accept(*this);
     std::cout << "]";
 }
+
+void LuaWriter::visit(AssignmentStmt* node) {
+    std::cout << node->getVarName() << " = ";
+    node->getValue()->accept(*this);
+}
+
+void LuaWriter::visit(ArrayAssignmentStmt* node) {
+    node->getArray()->accept(*this);
+    std::cout << "[";
+    node->getIndex()->accept(*this);
+    std::cout << "] = ";
+    node->getValue()->accept(*this);
+}

@@ -8,7 +8,7 @@
 // 二元操作符
 enum class BinaryOp {
     ADD, SUB, MUL, DIV, MOD,
-    EQ, NEQ, LT, LT_EQ, GT, GT_EQ,
+    EQ_OP, NEQ_OP, LT, LT_EQ, GT, GT_EQ,
     AND_OP, OR_OP, CONCAT
 };
 
@@ -275,4 +275,31 @@ public:
     void accept(Visitor& visitor) override {
         visitor.visit(this);
     }
+};
+// 变量赋值语句
+class AssignmentStmt : public Stmt {
+    std::string varName;
+    std::unique_ptr<Expr> value;
+public:
+    AssignmentStmt(const std::string& name, std::unique_ptr<Expr> val)
+        : varName(name), value(std::move(val)) {}
+    
+    const std::string& getVarName() const { return varName; }
+    Expr* getValue() const { return value.get(); }
+    void accept(Visitor& visitor) override;
+};
+
+// 数组赋值语句  
+class ArrayAssignmentStmt : public Stmt {
+    std::unique_ptr<Expr> array;
+    std::unique_ptr<Expr> index;
+    std::unique_ptr<Expr> value;
+public:
+    ArrayAssignmentStmt(std::unique_ptr<Expr> arr, std::unique_ptr<Expr> idx, std::unique_ptr<Expr> val)
+        : array(std::move(arr)), index(std::move(idx)), value(std::move(val)) {}
+    
+    Expr* getArray() const { return array.get(); }
+    Expr* getIndex() const { return index.get(); }
+    Expr* getValue() const { return value.get(); }
+    void accept(Visitor& visitor) override;
 };

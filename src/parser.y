@@ -53,7 +53,7 @@ UnaryOp tokenToUnaryOp(int token) {
 %token <number> NUMBER
 %token <string> STRING IDENTIFIER
 %token LOCAL FOR IF THEN ELSE ELSEIF WHILE DO REPEAT UNTIL FUNCTION END RETURN NIL
-%token AND OR NOT NE LE GE CONC
+%token AND OR NOT EQ NE LE GE CONC
 
 %type <expr> expr primary_expr
 %type <stmt> stmt function_decl return_stmt for_stmt if_stmt while_stmt repeat_stmt
@@ -63,7 +63,7 @@ UnaryOp tokenToUnaryOp(int token) {
 
 %left OR
 %left AND
-%left '<' LE '>' GE '=' NE
+%left '<' LE '>' GE EQ NE
 %left CONC
 %left '+' '-'
 %left '*' '/' '%'
@@ -109,6 +109,11 @@ stmt        : ';'                         { $$ = nullptr; }
             | if_stmt                     { $$ = $1; }
             | while_stmt                  { $$ = $1; }
             | repeat_stmt                 { $$ = $1; }
+            | IDENTIFIER "=" expr         { $$ = new AssignmentStmt($1, std::unique_ptr<Expr>($3)); }
+            | IDENTIFIER "[" expr "]" "=" expr { $$ = new ArrayAssignmentStmt(
+                                                    std::make_unique<VarExpr>($1),
+                                                    std::unique_ptr<Expr>($3),
+                                                    std::unique_ptr<Expr>($6)); }
             | expr                        { $$ = new ExprStmt(std::unique_ptr<Expr>($1)); }
             ;
 
@@ -236,8 +241,22 @@ expr        : primary_expr               { $$ = $1; }
                                                              std::unique_ptr<Expr>($2)); }
             | NOT expr
             {
-                (yyval.expr) = new UnaryExpr(UnaryOp::NOT_OP, std::unique_ptr<Expr>((yyvsp[(2) - (2)].expr)));
-            }
+                (yyval.expr) = new UnaryExpr(UnaryOp::NOT_OP, std::unique_ptr<Expr>((yyvsp[(2) - (2)].expr)));}
+            | expr AND expr              { $$ = new BinaryExpr(BinaryOp::AND_OP,
+                                                             std::unique_ptr<Expr>($1),
+                                                             std::unique_ptr<Expr>($3)); }
+            | expr OR expr               { $$ = new BinaryExpr(BinaryOp::OR_OP,
+                                                             std::unique_ptr<Expr>($1),
+                                                             std::unique_ptr<Expr>($3)); }
+            | expr EQ expr               { $$ = new BinaryExpr(BinaryOp::EQ_OP,
+                                                             std::unique_ptr<Expr>($1),
+                                                             std::unique_ptr<Expr>($3)); }
+            | expr ">" expr               { $$ = new BinaryExpr(BinaryOp::GT,
+                                                             std::unique_ptr<Expr>($1),
+                                                             std::unique_ptr<Expr>($3)); }
+            | expr "<" expr               { $$ = new BinaryExpr(BinaryOp::LT,
+                                                             std::unique_ptr<Expr>($1),
+                                                             std::unique_ptr<Expr>($3)); }
             ;
 
 primary_expr: NUMBER                     { $$ = new NumberExpr($1); }

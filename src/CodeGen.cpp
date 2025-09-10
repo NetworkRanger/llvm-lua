@@ -684,3 +684,45 @@ void CodeGenerator::visit(ArrayAccessExpr* expr) {
     lastValue = builder->CreateGEP(elementType, arrayValue, indices, "arrayaccess");
     lastValue = builder->CreateLoad(elementType, lastValue, "arrayload");
 }
+
+void CodeGenerator::visit(AssignmentStmt* node) {
+    // 获取变量名和值
+    std::string varName = node->getVarName();
+    node->getValue()->accept(*this);
+    llvm::Value* value = lastValue;
+    
+    // 查找或创建变量
+    llvm::AllocaInst* alloca = namedValues[varName];
+    if (!alloca) {
+        // 创建新的变量分配
+        alloca = builder->CreateAlloca(llvm::Type::getDoubleTy(*context), nullptr, varName);
+        namedValues[varName] = alloca;
+    }
+    
+    // 存储值
+    builder->CreateStore(value, alloca);
+    lastValue = value;
+}
+
+void CodeGenerator::visit(ArrayAssignmentStmt* node) {
+    // 获取数组、索引和值
+    node->getArray()->accept(*this);
+    llvm::Value* arrayValue = lastValue;
+    
+    node->getIndex()->accept(*this);
+    llvm::Value* indexValue = lastValue;
+    
+    node->getValue()->accept(*this);
+    llvm::Value* value = lastValue;
+    
+    // 创建索引向量
+    std::vector<llvm::Value*> indices;
+    indices.push_back(builder->getInt32(0)); // 第一个索引是0
+    indices.push_back(indexValue);
+    
+    // 假设数组元素是 double 类型
+    llvm::Type* elementType = llvm::Type::getDoubleTy(*context);
+    llvm::Value* gep = builder->CreateGEP(elementType, arrayValue, indices, "arrayassign");
+    builder->CreateStore(value, gep);
+    lastValue = value;
+}

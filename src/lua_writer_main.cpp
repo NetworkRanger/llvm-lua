@@ -5,7 +5,7 @@
 
 #include <iostream>
 #include "AST.h"
-#include "LuaWriter.h"
+// #include "LuaWriter.h"
 
 
 extern int yylex();
@@ -34,8 +34,8 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        LuaWriter luaWriter;
-        luaWriter.write(root.get());
+        // LuaWriter luaWriter;
+        // luaWriter.write(root.get());
 
         return 0;
     } catch (const std::exception& e) {
