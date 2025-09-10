@@ -260,3 +260,19 @@ public:
         visitor.visit(this);
     }
 };
+
+// 数组访问表达式
+class ArrayAccessExpr : public Expr {
+    std::unique_ptr<Expr> array;
+    std::unique_ptr<Expr> index;
+public:
+    ArrayAccessExpr(std::unique_ptr<Expr> arr, std::unique_ptr<Expr> idx)
+        : array(std::move(arr)), index(std::move(idx)) {}
+
+    Expr* getArray() const { return array.get(); }
+    Expr* getIndex() const { return index.get(); }
+
+    void accept(Visitor& visitor) override {
+        visitor.visit(this);
+    }
+};

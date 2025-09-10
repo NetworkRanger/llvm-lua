@@ -602,3 +602,24 @@ void CodeGenerator::executeCode() {
     // 清理
     delete engine;
 }
+
+
+
+void CodeGenerator::visit(ArrayAccessExpr* expr) {
+    // 生成数组访问的 LLVM IR
+    expr->getArray()->accept(*this);
+    llvm::Value* arrayValue = lastValue;
+    
+    expr->getIndex()->accept(*this);
+    llvm::Value* indexValue = lastValue;
+    
+    // 创建 GEP (GetElementPtr) 指令来访问数组元素
+    std::vector<llvm::Value*> indices;
+    indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), 0));
+    indices.push_back(indexValue);
+    
+    // 假设数组元素是 double 类型
+    llvm::Type* elementType = llvm::Type::getDoubleTy(*context);
+    lastValue = builder->CreateGEP(elementType, arrayValue, indices, "arrayaccess");
+    lastValue = builder->CreateLoad(elementType, lastValue, "arrayload");
+}

@@ -200,3 +200,10 @@ void LuaWriter::visit(BlockStmt* node) {
         std::cout << std::endl;
     }
 }
+
+void LuaWriter::visit(ArrayAccessExpr* expr) {
+    expr->getArray()->accept(*this);
+    std::cout << "[";
+    expr->getIndex()->accept(*this);
+    std::cout << "]";
+}

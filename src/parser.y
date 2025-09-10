@@ -69,6 +69,7 @@ UnaryOp tokenToUnaryOp(int token) {
 %left '*' '/' '%'
 %right NOT
 %right '^'
+%left '[' ']'
 
 %%
 
@@ -243,6 +244,13 @@ primary_expr: NUMBER                     { $$ = new NumberExpr($1); }
             | STRING                     { $$ = new StringExpr($1); }
             | NIL                        { $$ = new NilExpr(); }
             | IDENTIFIER                 { $$ = new VarExpr($1); }
+            | primary_expr '[' expr ']'
+            {
+                $$ = new ArrayAccessExpr(
+                    std::unique_ptr<Expr>($1),
+                    std::unique_ptr<Expr>($3)
+                );
+            }
             | IDENTIFIER '(' arg_list ')'
             {
                 std::vector<std::unique_ptr<Expr>> args;

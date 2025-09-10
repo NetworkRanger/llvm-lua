@@ -48,16 +48,6 @@ set(SOURCES
 # 创建可执行文件
 add_executable(luac ${SOURCES})
 
-set(LEXER_SOURCES
-        src/lexer_main.cpp
-        src/AST.cpp
-        src/ASTPrint.cpp
-        ${FLEX_Lexer_OUTPUTS}
-        ${BISON_Parser_OUTPUTS}
-)
-
-add_executable(luac-lexer ${LEXER_SOURCES})
-
 set(LUA_WRITER_SOURCES
         src/lua_writer_main.cpp
         src/AST.cpp
