@@ -217,8 +217,69 @@ void CodeGenerator::visit(PrintExpr* node) {
 
 void CodeGenerator::visit(ForStmt* node) {
     llvm::Function* function = builder->GetInsertBlock()->getParent();
-
-
+    
+    // 创建循环的基本块
+    llvm::BasicBlock* loopBB = llvm::BasicBlock::Create(*context, "loop", function);
+    llvm::BasicBlock* afterBB = llvm::BasicBlock::Create(*context, "afterloop");
+    
+    // 生成开始值
+    node->getStart()->accept(*this);
+    llvm::Value* startVal = lastValue;
+    
+    // 生成结束值
+    node->getEnd()->accept(*this);
+    llvm::Value* endVal = lastValue;
+    
+    // 创建循环变量
+    llvm::AllocaInst* alloca = builder->CreateAlloca(llvm::Type::getDoubleTy(*context), nullptr, node->getVarName());
+    builder->CreateStore(startVal, alloca);
+    
+    // 跳转到循环体
+    builder->CreateBr(loopBB);
+    
+    // 生成循环体
+    function->insert(function->end(), loopBB);
+    builder->SetInsertPoint(loopBB);
+    
+    // 加载循环变量
+    llvm::Value* curVar = builder->CreateLoad(llvm::Type::getDoubleTy(*context), alloca, node->getVarName());
+    
+    // 检查循环条件
+    llvm::Value* endCond = builder->CreateFCmpULE(curVar, endVal, "loopcond");
+    llvm::BasicBlock* loopBodyBB = llvm::BasicBlock::Create(*context, "loopbody");
+    llvm::BasicBlock* loopIncBB = llvm::BasicBlock::Create(*context, "loopinc");
+    
+    builder->CreateCondBr(endCond, loopBodyBB, afterBB);
+    
+    // 生成循环体
+    function->insert(function->end(), loopBodyBB);
+    builder->SetInsertPoint(loopBodyBB);
+    
+    // 将循环变量添加到命名值中
+    namedValues[node->getVarName()] = alloca;
+    
+    // 生成循环体代码
+    node->getBody()->accept(*this);
+    
+    // 跳转到增量
+    builder->CreateBr(loopIncBB);
+    
+    // 生成增量代码
+    function->insert(function->end(), loopIncBB);
+    builder->SetInsertPoint(loopIncBB);
+    
+    // 增加循环变量
+    llvm::Value* stepVal = llvm::ConstantFP::get(*context, llvm::APFloat(1.0));
+    llvm::Value* nextVar = builder->CreateFAdd(curVar, stepVal, "nextvar");
+    builder->CreateStore(nextVar, alloca);
+    
+    // 跳回循环开始
+    builder->CreateBr(loopBB);
+    
+    // 生成循环后的代码
+    function->insert(function->end(), afterBB);
+    builder->SetInsertPoint(afterBB);
+    builder->CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), 0));
 }
 
 void CodeGenerator::visit(IfStmt* node) {
@@ -276,7 +337,7 @@ void CodeGenerator::visit(WhileStmt* node) {
     
     function->insert(function->end(), afterBB);
     builder->SetInsertPoint(afterBB);
-}
+    builder->CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), 0));}
 
 void CodeGenerator::visit(RepeatStmt* node) {
     llvm::Function* function = builder->GetInsertBlock()->getParent();
@@ -301,7 +362,7 @@ void CodeGenerator::visit(RepeatStmt* node) {
     
     function->insert(function->end(), afterBB);
     builder->SetInsertPoint(afterBB);
-}
+    builder->CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), 0));}
 
 void CodeGenerator::visit(FunctionDecl* node) {
     std::string name = node->getName();
