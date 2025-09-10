@@ -94,7 +94,7 @@ target_link_libraries(luac PRIVATE
 )
 
 # 设置输出目录
-set_target_properties(luac PROPERTIES
+set_target_properties(luac lua-writer PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 

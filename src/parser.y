@@ -182,6 +182,20 @@ if_stmt     : IF expr THEN stmt_list ELSE stmt_list END
         delete $4;
         delete $6;
     }
+                | IF expr THEN stmt_list END
+                {
+                    std::vector<std::unique_ptr<Stmt>> thenStmts;
+                    
+                    for (auto& stmt : *$4) {
+                        thenStmts.push_back(std::move(stmt));
+                    }
+                    
+                    $$ = new IfStmt(
+                        std::unique_ptr<Expr>($2),
+                        std::make_unique<BlockStmt>(std::move(thenStmts))
+                    );
+                    delete $4;
+                }
     ;
 
 while_stmt  : WHILE expr DO stmt_list END
