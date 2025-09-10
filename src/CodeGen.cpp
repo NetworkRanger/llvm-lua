@@ -81,7 +81,7 @@ void CodeGenerator::generateCode(Stmt* root) {
     }
     
     // 确保基本块有终止指令
-    if (!block->getTerminator()) {
+    if (!builder->GetInsertBlock()->getTerminator()) {
         builder->CreateRet(llvm::ConstantInt::get(
             llvm::Type::getInt32Ty(*context), 0));
     }
@@ -174,6 +174,30 @@ void CodeGenerator::visit(BinaryExpr* node) {
             break;
         case BinaryOp::DIV:
             lastValue = builder->CreateFDiv(L, R, "divtmp");
+            break;
+        case BinaryOp::EQ_OP:
+            lastValue = builder->CreateFCmpOEQ(L, R, "eqtmp");
+            break;
+        case BinaryOp::NEQ_OP:
+            lastValue = builder->CreateFCmpONE(L, R, "neqtmp");
+            break;
+        case BinaryOp::GT:
+            lastValue = builder->CreateFCmpOGT(L, R, "gttmp");
+            break;
+        case BinaryOp::LT:
+            lastValue = builder->CreateFCmpOLT(L, R, "lttmp");
+            break;
+        case BinaryOp::GT_EQ:
+            lastValue = builder->CreateFCmpOGE(L, R, "getmp");
+            break;
+        case BinaryOp::LT_EQ:
+            lastValue = builder->CreateFCmpOLE(L, R, "letmp");
+            break;
+        case BinaryOp::AND_OP:
+            lastValue = builder->CreateAnd(L, R, "andtmp");
+            break;
+        case BinaryOp::OR_OP:
+            lastValue = builder->CreateOr(L, R, "ortmp");
             break;
         default:
             throw std::runtime_error("Unknown binary operator");
@@ -286,7 +310,6 @@ void CodeGenerator::visit(IfStmt* node) {
     llvm::Function* function = builder->GetInsertBlock()->getParent();
     
     llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(*context, "then", function);
-    llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(*context, "else");
     llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(*context, "ifcont");
     
     // 生成条件代码
@@ -294,26 +317,33 @@ void CodeGenerator::visit(IfStmt* node) {
     llvm::Value* condV = lastValue;
     condV = builder->CreateFCmpONE(condV, llvm::ConstantFP::get(*context, llvm::APFloat(0.0)), "ifcond");
     
-    builder->CreateCondBr(condV, thenBB, elseBB);
-    
-    // 生成then分支
-    builder->SetInsertPoint(thenBB);
-    node->getThenBranch()->accept(*this);
-    builder->CreateBr(mergeBB);
-    
-    // 生成else分支
-    function->insert(function->end(), elseBB);
-    builder->SetInsertPoint(elseBB);
     if (node->getElseBranch()) {
+        llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(*context, "else");
+        builder->CreateCondBr(condV, thenBB, elseBB);
+        
+        // 生成then分支
+        builder->SetInsertPoint(thenBB);
+        node->getThenBranch()->accept(*this);
+        builder->CreateBr(mergeBB);
+        
+        // 生成else分支
+        function->insert(function->end(), elseBB);
+        builder->SetInsertPoint(elseBB);
         node->getElseBranch()->accept(*this);
+        builder->CreateBr(mergeBB);
+    } else {
+        builder->CreateCondBr(condV, thenBB, mergeBB);
+        
+        // 生成then分支
+        builder->SetInsertPoint(thenBB);
+        node->getThenBranch()->accept(*this);
+        builder->CreateBr(mergeBB);
     }
-    builder->CreateBr(mergeBB);
     
     // 生成合并块
     function->insert(function->end(), mergeBB);
     builder->SetInsertPoint(mergeBB);
 }
-
 void CodeGenerator::visit(WhileStmt* node) {
     llvm::Function* function = builder->GetInsertBlock()->getParent();
     
@@ -397,7 +427,7 @@ void CodeGenerator::visit(FunctionDecl* node) {
     }
     
     // 确保有返回值
-    if (!block->getTerminator()) {
+    if (!builder->GetInsertBlock()->getTerminator()) {
         if (function->getReturnType()->isStructTy()) {
             llvm::Value* returnStruct = llvm::UndefValue::get(function->getReturnType());
             returnStruct = builder->CreateInsertValue(returnStruct,
@@ -794,10 +824,10 @@ void CodeGenerator::visit(ArrayLiteralExpr* node) {    lastValue = llvm::Constan
 
 void CodeGenerator::visit(TrueExpr* node) {
     // 布尔值 true 在 LLVM 中表示为 1
-    lastValue = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*context), 1);
+    lastValue = llvm::ConstantFP::get(*context, llvm::APFloat(1.0));
 }
 
 void CodeGenerator::visit(FalseExpr* node) {
     // 布尔值 false 在 LLVM 中表示为 0
-    lastValue = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*context), 0);
+    lastValue = llvm::ConstantFP::get(*context, llvm::APFloat(0.0));
 }

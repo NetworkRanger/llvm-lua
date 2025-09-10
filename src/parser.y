@@ -55,7 +55,7 @@ UnaryOp tokenToUnaryOp(int token) {
 %token LOCAL FOR IF THEN ELSE ELSEIF WHILE DO REPEAT UNTIL FUNCTION END RETURN NIL TRUE FALSE
 %token AND OR NOT EQ NE LE GE CONC
 
-%type <expr> expr simpleexp suffixedexp primaryexp functioncall
+%type <expr> expr simpleexp suffixedexp primaryexp 
 %type <exprList> funcargs
 %type <stmt> stmt function_decl return_stmt for_stmt if_stmt while_stmt repeat_stmt
 %type <stmtList> stmt_list
@@ -64,7 +64,9 @@ UnaryOp tokenToUnaryOp(int token) {
 
 %left OR
 %left AND
-%left '<' LE '>' GE EQ NE
+%left EQ NE
+%left '<' '>'
+%left LE GE
 %left CONC
 %left '+' '-'
 %left '*' '/' '%'
@@ -85,8 +87,7 @@ program     : stmt_list
     }
     ;
 
-stmt_list   : stmt
-    {
+stmt_list   : stmt    {
         $$ = new std::vector<std::unique_ptr<Stmt>>();
         if ($1) {
             $$->push_back(std::unique_ptr<Stmt>($1));
@@ -115,7 +116,8 @@ stmt        : ';'                         { $$ = nullptr; }
                                                     std::make_unique<VarExpr>($1),
                                                     std::unique_ptr<Expr>($3),
                                                     std::unique_ptr<Expr>($6)); }
-            | functioncall                { $$ = new ExprStmt(std::unique_ptr<Expr>($1)); }            ;
+            | expr                        { $$ = new ExprStmt(std::unique_ptr<Expr>($1)); }
+            ;
 
 function_decl: FUNCTION IDENTIFIER '(' param_list ')' stmt_list END
     {
@@ -292,6 +294,8 @@ expr        : simpleexp                  { $$ = $1; }
             {
                 $$ = new UnaryExpr(UnaryOp::NOT_OP, std::unique_ptr<Expr>($2));
             }
+            | '#' expr %prec NOT         { $$ = new UnaryExpr(UnaryOp::LEN,
+                                                             std::unique_ptr<Expr>($2)); }
             | expr '+' expr              { $$ = new BinaryExpr(BinaryOp::ADD,
                                                              std::unique_ptr<Expr>($1),
                                                              std::unique_ptr<Expr>($3)); }
@@ -304,35 +308,36 @@ expr        : simpleexp                  { $$ = $1; }
             | expr '/' expr              { $$ = new BinaryExpr(BinaryOp::DIV,
                                                              std::unique_ptr<Expr>($1),
                                                              std::unique_ptr<Expr>($3)); }
+            | expr '%' expr              { $$ = new BinaryExpr(BinaryOp::MOD,
+                                                             std::unique_ptr<Expr>($1),
+                                                             std::unique_ptr<Expr>($3)); }
+            | expr CONC expr             { $$ = new BinaryExpr(BinaryOp::CONCAT,
+                                                             std::unique_ptr<Expr>($1),
+                                                             std::unique_ptr<Expr>($3)); }
+            | expr '<' expr              { $$ = new BinaryExpr(BinaryOp::LT,
+                                                             std::unique_ptr<Expr>($1),
+                                                             std::unique_ptr<Expr>($3)); }
+            | expr '>' expr              { $$ = new BinaryExpr(BinaryOp::GT,
+                                                             std::unique_ptr<Expr>($1),
+                                                             std::unique_ptr<Expr>($3)); }
+            | expr LE expr               { $$ = new BinaryExpr(BinaryOp::LT_EQ,
+                                                             std::unique_ptr<Expr>($1),
+                                                             std::unique_ptr<Expr>($3)); }
+            | expr GE expr               { $$ = new BinaryExpr(BinaryOp::GT_EQ,
+                                                             std::unique_ptr<Expr>($1),
+                                                             std::unique_ptr<Expr>($3)); }
+            | expr EQ expr               { $$ = new BinaryExpr(BinaryOp::EQ_OP,
+                                                             std::unique_ptr<Expr>($1),
+                                                             std::unique_ptr<Expr>($3)); }
+            | expr NE expr               { $$ = new BinaryExpr(BinaryOp::NEQ_OP,
+                                                             std::unique_ptr<Expr>($1),
+                                                             std::unique_ptr<Expr>($3)); }
             | expr AND expr              { $$ = new BinaryExpr(BinaryOp::AND_OP,
                                                              std::unique_ptr<Expr>($1),
                                                              std::unique_ptr<Expr>($3)); }
             | expr OR expr               { $$ = new BinaryExpr(BinaryOp::OR_OP,
                                                              std::unique_ptr<Expr>($1),
                                                              std::unique_ptr<Expr>($3)); }
-            | expr EQ expr               { $$ = new BinaryExpr(BinaryOp::EQ_OP,
-                                                             std::unique_ptr<Expr>($1),
-                                                             std::unique_ptr<Expr>($3)); }
-            | expr ">" expr               { $$ = new BinaryExpr(BinaryOp::GT,
-                                                             std::unique_ptr<Expr>($1),
-                                                             std::unique_ptr<Expr>($3)); }
-            | expr "<" expr               { $$ = new BinaryExpr(BinaryOp::LT,
-                                                             std::unique_ptr<Expr>($1),
-                                                             std::unique_ptr<Expr>($3)); }
-            ;
-
-functioncall: suffixedexp funcargs
-            {
-                std::vector<std::unique_ptr<Expr>> args;
-                for (auto& arg : *$2) {
-                    args.push_back(std::move(arg));
-                }
-                $$ = new CallExpr(
-                    std::unique_ptr<Expr>($1),
-                    std::move(args)
-                );
-                delete $2;
-            }
             ;
 
 
