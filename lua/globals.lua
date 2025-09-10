@@ -7,7 +7,7 @@ local N = 8                          -- 棋盘大小
 -- a   : 数组，a[i]=j 表示第 i 行皇后放在第 j 列
 -- n   : 当前准备放置的行号
 -- c   : 当前准备放置的列号
-local function isplaceok (a, n, c)
+function isplaceok (a, n, c)
  for i = 1, n - 1 do              -- 之前的每一行
   if (a[i] == c)                or      -- 同列
           (a[i] - i == c - n)        or      -- 主对角线
@@ -20,7 +20,7 @@ local function isplaceok (a, n, c)
 end
 
 -- 打印棋盘
-local function printsolution (a)
+function printsolution (a)
  for i = 1, N do                    -- 每一行
   for j = 1, N do                -- 每一列
    io.write(a[i] == j and "X" or "-", " ")
@@ -33,7 +33,7 @@ end
 -- 递归放置皇后
 -- a : 棋盘数组（1~N）
 -- n : 当前要放的行（1~N+1）
-local function addqueen (a, n)
+function addqueen (a, n)
  if n > N then                      -- 全部放完
   printsolution(a)
  else

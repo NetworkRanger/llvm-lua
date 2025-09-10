@@ -82,6 +82,10 @@ void LuaWriter::visit(PrintExpr* node) {
     node->getExpr()->accept(*this);
 }
 
+void LuaWriter::visit(ForStmt* node) {
+    std::cout << type_name(node) << std::endl;
+}
+
 void LuaWriter::visit(IfStmt* node) {
     std::cout << type_name(node) << std::endl;
 

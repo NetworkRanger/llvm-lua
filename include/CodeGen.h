@@ -37,6 +37,7 @@ private:
     void visit(FunctionDecl* node) override;
     void visit(ReturnStmt* node) override;
     void visit(IfStmt* node) override;
+    void visit(ForStmt* node) override;
     void visit(WhileStmt* node) override;
     void visit(RepeatStmt* node) override;
     void visit(ExprStmt* node) override;

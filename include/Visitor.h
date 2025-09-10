@@ -4,6 +4,7 @@
 class BlockStmt;
 class FunctionDecl;
 class ReturnStmt;
+class ForStmt;
 class IfStmt;
 class WhileStmt;
 class RepeatStmt;
@@ -27,6 +28,7 @@ public:
     virtual void visit(BlockStmt* node) = 0;
     virtual void visit(FunctionDecl* node) = 0;
     virtual void visit(ReturnStmt* node) = 0;
+    virtual void visit(ForStmt* node) = 0;
     virtual void visit(IfStmt* node) = 0;
     virtual void visit(WhileStmt* node) = 0;
     virtual void visit(RepeatStmt* node) = 0;

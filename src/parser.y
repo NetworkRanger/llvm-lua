@@ -52,11 +52,11 @@ UnaryOp tokenToUnaryOp(int token) {
 
 %token <number> NUMBER
 %token <string> STRING IDENTIFIER
-%token LOCAL IF THEN ELSE ELSEIF WHILE DO REPEAT UNTIL FUNCTION END RETURN NIL
+%token LOCAL FOR IF THEN ELSE ELSEIF WHILE DO REPEAT UNTIL FUNCTION END RETURN NIL
 %token AND OR NOT NE LE GE CONC
 
 %type <expr> expr primary_expr
-%type <stmt> stmt function_decl return_stmt if_stmt while_stmt repeat_stmt
+%type <stmt> stmt function_decl return_stmt for_stmt if_stmt while_stmt repeat_stmt
 %type <stmtList> stmt_list
 %type <identList> param_list
 %type <exprList> expr_list arg_list
@@ -104,6 +104,7 @@ stmt        : ';'                         { $$ = nullptr; }
             | LOCAL IDENTIFIER             { $$ = new LocalVarDecl($2); }
             | function_decl               { $$ = $1; }
             | return_stmt                 { $$ = $1; }
+            | for_stmt                     { $$ = $1; }
             | if_stmt                     { $$ = $1; }
             | while_stmt                  { $$ = $1; }
             | repeat_stmt                 { $$ = $1; }
@@ -140,6 +141,18 @@ return_stmt : RETURN expr_list
     | RETURN
     {
         $$ = new ReturnStmt(std::vector<std::unique_ptr<Expr>>());
+    }
+    ;
+
+for_stmt    : FOR IDENTIFIER '=' expr ',' expr DO stmt_list END
+    {
+        std::vector<std::unique_ptr<Stmt>> body;
+        for (auto& stmt : *$8) {
+            body.push_back(std::move(stmt));
+        }
+        $$ = new ForStmt($2, std::unique_ptr<Expr>($4), std::unique_ptr<Expr>($6),
+                         std::make_unique<BlockStmt>(std::move(body)));
+        delete $8;
     }
     ;
 

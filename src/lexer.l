@@ -13,6 +13,7 @@ int line_number = 1;
 \n              { line_number++; }
 "--".*          ; /* 忽略单行注释 */
 "local"         { return LOCAL; }
+"for"            { return FOR; }
 "if"            { return IF; }
 "then"          { return THEN; }
 "else"          { return ELSE; }

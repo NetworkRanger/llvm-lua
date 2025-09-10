@@ -215,6 +215,12 @@ void CodeGenerator::visit(PrintExpr* node) {
     builder->CreateCall(printf, args);
 }
 
+void CodeGenerator::visit(ForStmt* node) {
+    llvm::Function* function = builder->GetInsertBlock()->getParent();
+
+
+}
+
 void CodeGenerator::visit(IfStmt* node) {
     llvm::Function* function = builder->GetInsertBlock()->getParent();
     

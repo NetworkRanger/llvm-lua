@@ -33,9 +33,9 @@ int main(int argc, char* argv[]) {
             std::cerr << "Error: Parsing failed" << std::endl;
             return 1;
         }
-
-        ASTPrint astPrint;
-        astPrint.printAST(root.get());
+        //
+        // ASTPrint astPrint;
+        // astPrint.printAST(root.get());
 
         return 0;
     } catch (const std::exception& e) {

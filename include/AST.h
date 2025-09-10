@@ -242,3 +242,21 @@ public:
         visitor.visit(this);
     }
 }; 
+// for循环语句
+class ForStmt : public Stmt {
+    std::string varName;
+    std::unique_ptr<Expr> start;
+    std::unique_ptr<Expr> end;
+    std::unique_ptr<Stmt> body;
+public:
+    ForStmt(const std::string& var, std::unique_ptr<Expr> s, std::unique_ptr<Expr> e, std::unique_ptr<Stmt> b)
+        : varName(var), start(std::move(s)), end(std::move(e)), body(std::move(b)) {}
+    
+    const std::string& getVarName() const { return varName; }
+    Expr* getStart() const { return start.get(); }
+    Expr* getEnd() const { return end.get(); }
+    Stmt* getBody() const { return body.get(); }
+    void accept(Visitor& visitor) override {
+        visitor.visit(this);
+    }
+};
