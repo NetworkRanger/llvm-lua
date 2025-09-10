@@ -726,3 +726,28 @@ void CodeGenerator::visit(ArrayAssignmentStmt* node) {
     builder->CreateStore(value, gep);
     lastValue = value;
 }
+
+void CodeGenerator::visit(FieldAccessExpr* node) {
+    // 简单处理：将字段访问当作函数调用处理
+    // 例如 io.write 被当作一个内置函数
+    std::string objName;
+    if (auto* varExpr = dynamic_cast<VarExpr*>(node->getObject())) {
+        objName = varExpr->getName();
+    }
+    
+    std::string fieldName = node->getFieldName();
+    std::string fullName = objName + "." + fieldName;
+    
+    // 对于 io.write，我们将其当作 printf 处理
+    if (fullName == "io.write") {
+        // 创建一个特殊的函数引用
+        lastValue = module->getFunction("printf");
+        if (!lastValue) {
+            declarePrintf();
+            lastValue = module->getFunction("printf");
+        }
+    } else {
+        // 其他字段访问暂不支持
+        lastValue = builder->getInt32(0);
+    }
+}

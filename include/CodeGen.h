@@ -53,4 +53,5 @@ private:
     void visit(ArrayAccessExpr* node) override;
     void visit(AssignmentStmt* node) override;
     void visit(ArrayAssignmentStmt* node) override;
+    void visit(FieldAccessExpr* node) override;
 };

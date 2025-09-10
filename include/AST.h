@@ -303,3 +303,16 @@ public:
     Expr* getValue() const { return value.get(); }
     void accept(Visitor& visitor) override;
 };
+
+// 字段访问表达式  
+class FieldAccessExpr : public Expr {
+    std::unique_ptr<Expr> object;
+    std::string fieldName;
+public:
+    FieldAccessExpr(std::unique_ptr<Expr> obj, const std::string& field)
+        : object(std::move(obj)), fieldName(field) {}
+    
+    Expr* getObject() const { return object.get(); }
+    const std::string& getFieldName() const { return fieldName; }
+    void accept(Visitor& visitor) override;
+};

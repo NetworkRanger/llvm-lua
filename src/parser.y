@@ -294,7 +294,13 @@ primary_expr: NUMBER                     { $$ = new NumberExpr($1); }
                 delete $3;
             }
             | '(' expr ')'               { $$ = $2; }
-            ;
+            | primary_expr "." IDENTIFIER
+            {
+                $$ = new FieldAccessExpr(
+                    std::unique_ptr<Expr>($1),
+                    $3
+                );
+            }            ;
 
 arg_list    : /* empty */               { $$ = new std::vector<std::unique_ptr<Expr>>(); }
             | expr_list                  { $$ = $1; }

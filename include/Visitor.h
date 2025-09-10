@@ -20,7 +20,7 @@ class AssignmentStmt;
 class ArrayAssignmentStmt;class PrintExpr;
 class LocalVarDecl;
 class ArrayAccessExpr;
-
+class FieldAccessExpr;
 // 访问者基类
 class Visitor {
 public:
@@ -45,5 +45,7 @@ public:
     virtual void visit(PrintExpr* node) = 0;
     virtual void visit(LocalVarDecl* node) = 0;
     virtual void visit(AssignmentStmt* node) = 0;
-    virtual void visit(ArrayAssignmentStmt* node) = 0;    virtual void visit(ArrayAccessExpr* node) = 0;
+    virtual void visit(ArrayAssignmentStmt* node) = 0;
+    virtual void visit(FieldAccessExpr* node) = 0;
+    virtual void visit(ArrayAccessExpr* node) = 0;
 }; 

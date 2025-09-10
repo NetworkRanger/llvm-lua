@@ -220,3 +220,8 @@ void LuaWriter::visit(ArrayAssignmentStmt* node) {
     std::cout << "] = ";
     node->getValue()->accept(*this);
 }
+
+void LuaWriter::visit(FieldAccessExpr* node) {
+    node->getObject()->accept(*this);
+    std::cout << "." << node->getFieldName();
+}

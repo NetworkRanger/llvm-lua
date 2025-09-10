@@ -40,3 +40,8 @@ void AssignmentStmt::accept(Visitor& visitor) {
 void ArrayAssignmentStmt::accept(Visitor& visitor) {
 	visitor.visit(this);
 }
+
+// FieldAccessExpr 实现
+void FieldAccessExpr::accept(Visitor& visitor) {
+	visitor.visit(this);
+}
