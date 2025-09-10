@@ -100,6 +100,8 @@ stmt_list   : stmt
     ;
 
 stmt        : ';'                         { $$ = nullptr; }
+            | LOCAL IDENTIFIER '=' expr   { $$ = new LocalVarDecl($2, std::unique_ptr<Expr>($4)); }
+            | LOCAL IDENTIFIER             { $$ = new LocalVarDecl($2); }
             | function_decl               { $$ = $1; }
             | return_stmt                 { $$ = $1; }
             | if_stmt                     { $$ = $1; }
