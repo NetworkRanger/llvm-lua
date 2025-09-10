@@ -30,6 +30,7 @@ public:
     virtual void accept(Visitor& visitor) = 0;
 };
 
+
 // 语句基类
 class Stmt : public Node {
 public:
@@ -185,6 +186,7 @@ public:
     const std::string& getValue() const { return value; }
 };
 
+
 // nil表达式
 class NilExpr : public Expr {
 public:
@@ -192,6 +194,23 @@ public:
         visitor.visit(this);
     }
 };
+
+// true表达式
+class TrueExpr : public Expr {
+public:
+    void accept(Visitor& visitor) override {
+        visitor.visit(this);
+    }
+};
+
+// false表达式
+class FalseExpr : public Expr {
+public:
+    void accept(Visitor& visitor) override {
+        visitor.visit(this);
+    }
+};
+
 
 // 一元表达式
 class UnaryExpr : public Expr {
@@ -207,6 +226,7 @@ public:
         visitor.visit(this);
     }
 };
+
 
 // 表达式语句
 class ExprStmt : public Stmt {
@@ -264,6 +284,7 @@ public:
     }
 };
 
+
 // 数组访问表达式
 class ArrayAccessExpr : public Expr {
     std::unique_ptr<Expr> array;
@@ -279,6 +300,7 @@ public:
         visitor.visit(this);
     }
 };
+
 // 变量赋值语句
 class AssignmentStmt : public Stmt {
     std::string varName;
@@ -291,6 +313,7 @@ public:
     Expr* getValue() const { return value.get(); }
     void accept(Visitor& visitor) override;
 };
+
 
 // 数组赋值语句  
 class ArrayAssignmentStmt : public Stmt {
@@ -307,6 +330,7 @@ public:
     void accept(Visitor& visitor) override;
 };
 
+
 // 字段访问表达式  
 class FieldAccessExpr : public Expr {
     std::unique_ptr<Expr> object;
@@ -320,6 +344,7 @@ public:
     void accept(Visitor& visitor) override;
 };
 
+
 // 数组字面量表达式  
 class ArrayLiteralExpr : public Expr {
     std::vector<std::unique_ptr<Expr>> elements;
@@ -330,3 +355,4 @@ public:
     const std::vector<std::unique_ptr<Expr>>& getElements() const { return elements; }
     void accept(Visitor& visitor) override;
 };
+

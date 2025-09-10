@@ -29,7 +29,8 @@ int line_number = 1;
 "and"           { return AND; }
 "or"            { return OR; }
 "not"           { return NOT; }
-
+"true"          { return TRUE; }
+"false"         { return FALSE; }
 "~="            { return NE; }
 "<="            { return LE; }
 ">="            { return GE; }

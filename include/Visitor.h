@@ -14,6 +14,8 @@ class UnaryExpr;
 class NumberExpr;
 class StringExpr;
 class NilExpr;
+class TrueExpr;
+class FalseExpr;
 class VarExpr;
 class CallExpr;
 class AssignmentStmt;
@@ -40,6 +42,8 @@ public:
     virtual void visit(NumberExpr* node) = 0;
     virtual void visit(StringExpr* node) = 0;
     virtual void visit(NilExpr* node) = 0;
+    virtual void visit(TrueExpr* node) = 0;
+    virtual void visit(FalseExpr* node) = 0;
     virtual void visit(VarExpr* node) = 0;
     virtual void visit(CallExpr* node) = 0;
     virtual void visit(PrintExpr* node) = 0;

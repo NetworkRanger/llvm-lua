@@ -46,6 +46,8 @@ private:
     void visit(NumberExpr* node) override;
     void visit(StringExpr* node) override;
     void visit(NilExpr* node) override;
+    void visit(TrueExpr* node) override;
+    void visit(FalseExpr* node) override;
     void visit(VarExpr* node) override;
     void visit(CallExpr* node) override;
     void visit(PrintExpr* node) override;
@@ -53,5 +55,6 @@ private:
     void visit(ArrayAccessExpr* node) override;
     void visit(AssignmentStmt* node) override;
     void visit(ArrayAssignmentStmt* node) override;
-    void visit(ArrayLiteralExpr* node) override;    void visit(FieldAccessExpr* node) override;
+    void visit(ArrayLiteralExpr* node) override;
+    void visit(FieldAccessExpr* node) override;
 };

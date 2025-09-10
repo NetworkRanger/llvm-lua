@@ -459,12 +459,13 @@ void CodeGenerator::visit(ReturnStmt* node) {
 }
 
 void CodeGenerator::visit(LocalVarDecl* node) {
+    llvm::AllocaInst* alloca = builder->CreateAlloca(
+        llvm::Type::getDoubleTy(*context), nullptr, node->getName());
     if (node->getInitializer()) {
         node->getInitializer()->accept(*this);
-        llvm::AllocaInst* alloca = builder->CreateAlloca(
-            llvm::Type::getDoubleTy(*context), nullptr, node->getName());
         builder->CreateStore(lastValue, alloca);
     }
+    namedValues[node->getName()] = alloca;
 }
 
 void CodeGenerator::visit(StringExpr* node) {
@@ -789,4 +790,14 @@ void CodeGenerator::visit(FieldAccessExpr* node) {
 }
 
 void CodeGenerator::visit(ArrayLiteralExpr* node) {    lastValue = llvm::Constant::getNullValue(llvm::PointerType::get(llvm::Type::getDoubleTy(*context), 0));
+}
+
+void CodeGenerator::visit(TrueExpr* node) {
+    // 布尔值 true 在 LLVM 中表示为 1
+    lastValue = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*context), 1);
+}
+
+void CodeGenerator::visit(FalseExpr* node) {
+    // 布尔值 false 在 LLVM 中表示为 0
+    lastValue = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*context), 0);
 }

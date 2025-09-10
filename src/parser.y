@@ -52,7 +52,7 @@ UnaryOp tokenToUnaryOp(int token) {
 
 %token <number> NUMBER
 %token <string> STRING IDENTIFIER
-%token LOCAL FOR IF THEN ELSE ELSEIF WHILE DO REPEAT UNTIL FUNCTION END RETURN NIL
+%token LOCAL FOR IF THEN ELSE ELSEIF WHILE DO REPEAT UNTIL FUNCTION END RETURN NIL TRUE FALSE
 %token AND OR NOT EQ NE LE GE CONC
 
 %type <expr> expr simpleexp suffixedexp primaryexp functioncall
@@ -278,6 +278,8 @@ funcargs    : '(' arg_list ')'
             ;
 
 simpleexp   : NIL                        { $$ = new NilExpr(); }
+            | TRUE                        { $$ = new TrueExpr(); }
+            | FALSE                       { $$ = new FalseExpr(); }
             | NUMBER                     { $$ = new NumberExpr($1); }
             | STRING                     { $$ = new StringExpr($1); }
             | suffixedexp                { $$ = $1; }
@@ -288,7 +290,8 @@ expr        : simpleexp                  { $$ = $1; }
                                                              std::unique_ptr<Expr>($2)); }
             | NOT expr
             {
-                (yyval.expr) = new UnaryExpr(UnaryOp::NOT_OP, std::unique_ptr<Expr>((yyvsp[(2) - (2)].expr)));}
+                $$ = new UnaryExpr(UnaryOp::NOT_OP, std::unique_ptr<Expr>($2));
+            }
             | expr '+' expr              { $$ = new BinaryExpr(BinaryOp::ADD,
                                                              std::unique_ptr<Expr>($1),
                                                              std::unique_ptr<Expr>($3)); }
