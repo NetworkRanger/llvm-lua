@@ -501,13 +501,6 @@ void CodeGenerator::visit(ExprStmt* node) {
 }
 
 void CodeGenerator::saveModuleToFile(const std::string& filename) {
-    // 确保目录存在
-    std::string dir = filename.substr(0, filename.find_last_of("/\\"));
-    if (!dir.empty()) {
-        std::string cmd = "mkdir -p " + dir;
-        system(cmd.c_str());
-    }
-
     std::error_code EC;
     llvm::raw_fd_ostream dest(filename, EC, llvm::sys::fs::OF_None);
     
@@ -524,7 +517,52 @@ void CodeGenerator::saveModuleToFile(const std::string& filename) {
 
 void CodeGenerator::visit(CallExpr* node) {
     std::string calleeName = node->getCallee();
-    llvm::Function* callee = module->getFunction(calleeName);
+    llvm::Function* callee = nullptr;
+    
+    // 检查是否是被调用者是 FieldAccessExpr
+    if (node->getCalleeExpr()) {
+        if (auto* fieldAccess = dynamic_cast<FieldAccessExpr*>(node->getCalleeExpr())) {
+            std::string objName;
+            if (auto* varExpr = dynamic_cast<VarExpr*>(fieldAccess->getObject())) {
+                objName = varExpr->getName();
+            }
+            std::string fieldName = fieldAccess->getFieldName();
+            std::string fullName = objName + "." + fieldName;
+            
+            if (fullName == "io.write") {
+                // 处理 io.write 调用
+                std::vector<llvm::Value*> args;
+                for (const auto& arg : node->getArguments()) {
+                    arg->accept(*this);
+                    args.push_back(lastValue);
+                }
+                
+                // 创建格式字符串（支持多个参数）
+                std::string formatStr = "";
+                for (size_t i = 0; i < args.size(); ++i) {
+                    formatStr += "%g";
+                    if (i < args.size() - 1) formatStr += " ";
+                }
+                
+                llvm::Value* formatValue = builder->CreateGlobalString(formatStr, "fmt");
+                
+                // 调用 printf
+                std::vector<llvm::Value*> printfArgs;
+                printfArgs.push_back(builder->CreatePointerCast(formatValue,
+                    llvm::PointerType::get(builder->getInt8Ty(), 0)));
+                for (auto& arg : args) {
+                    printfArgs.push_back(arg);
+                }
+                
+                lastValue = builder->CreateCall(module->getFunction("printf"), printfArgs);
+                return;
+            }
+        }
+    }
+    
+    if (!callee) {
+        callee = module->getFunction(calleeName);
+    }
     
     if (!callee) {
         if (calleeName == "print") {
@@ -585,7 +623,6 @@ void CodeGenerator::visit(VarExpr* expr) {
     }
     lastValue = builder->CreateLoad(alloca->getAllocatedType(), alloca, expr->getName().c_str());
 }
-
 void CodeGenerator::visit(BlockStmt* node) {
     for (const auto& stmt : node->getStatements()) {
         stmt->accept(*this);
@@ -740,14 +777,16 @@ void CodeGenerator::visit(FieldAccessExpr* node) {
     
     // 对于 io.write，我们将其当作 printf 处理
     if (fullName == "io.write") {
-        // 创建一个特殊的函数引用
-        lastValue = module->getFunction("printf");
-        if (!lastValue) {
+        // 声明 printf 函数（如果还没有声明）
+        if (!module->getFunction("printf")) {
             declarePrintf();
-            lastValue = module->getFunction("printf");
         }
+        lastValue = module->getFunction("printf");
     } else {
         // 其他字段访问暂不支持
         lastValue = builder->getInt32(0);
     }
+}
+
+void CodeGenerator::visit(ArrayLiteralExpr* node) {    lastValue = llvm::Constant::getNullValue(llvm::PointerType::get(llvm::Type::getDoubleTy(*context), 0));
 }

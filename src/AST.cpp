@@ -45,3 +45,8 @@ void ArrayAssignmentStmt::accept(Visitor& visitor) {
 void FieldAccessExpr::accept(Visitor& visitor) {
 	visitor.visit(this);
 }
+
+// ArrayLiteralExpr 实现
+void ArrayLiteralExpr::accept(Visitor& visitor) {
+	visitor.visit(this);
+}

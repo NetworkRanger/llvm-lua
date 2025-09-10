@@ -21,7 +21,7 @@ class ArrayAssignmentStmt;class PrintExpr;
 class LocalVarDecl;
 class ArrayAccessExpr;
 class FieldAccessExpr;
-// 访问者基类
+class ArrayLiteralExpr;// 访问者基类
 class Visitor {
 public:
     virtual ~Visitor() = default;
@@ -48,4 +48,5 @@ public:
     virtual void visit(ArrayAssignmentStmt* node) = 0;
     virtual void visit(FieldAccessExpr* node) = 0;
     virtual void visit(ArrayAccessExpr* node) = 0;
-}; 
+    virtual void visit(ArrayLiteralExpr* node) = 0;
+};

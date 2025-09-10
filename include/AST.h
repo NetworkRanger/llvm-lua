@@ -220,12 +220,16 @@ public:
 class CallExpr : public Expr {
     std::string callee;
     std::vector<std::unique_ptr<Expr>> arguments;
+    std::unique_ptr<Expr> calleeExpr;
 public:
     CallExpr(const std::string& c, std::vector<std::unique_ptr<Expr>> args)
         : callee(c), arguments(std::move(args)) {}
+    CallExpr(std::unique_ptr<Expr> calleeExpr, std::vector<std::unique_ptr<Expr>> args)
+        : callee(""), arguments(std::move(args)), calleeExpr(std::move(calleeExpr)) {}
     
     const std::string& getCallee() const { return callee; }
     const std::vector<std::unique_ptr<Expr>>& getArguments() const { return arguments; }
+    Expr* getCalleeExpr() const { return calleeExpr.get(); }
     void accept(Visitor& visitor) override {
         visitor.visit(this);
     }
@@ -241,8 +245,7 @@ public:
     void accept(Visitor& visitor) override {
         visitor.visit(this);
     }
-}; 
-// for循环语句
+};// for循环语句
 class ForStmt : public Stmt {
     std::string varName;
     std::unique_ptr<Expr> start;
@@ -314,5 +317,16 @@ public:
     
     Expr* getObject() const { return object.get(); }
     const std::string& getFieldName() const { return fieldName; }
+    void accept(Visitor& visitor) override;
+};
+
+// 数组字面量表达式  
+class ArrayLiteralExpr : public Expr {
+    std::vector<std::unique_ptr<Expr>> elements;
+public:
+    ArrayLiteralExpr(std::vector<std::unique_ptr<Expr>> elems)
+        : elements(std::move(elems)) {}
+    
+    const std::vector<std::unique_ptr<Expr>>& getElements() const { return elements; }
     void accept(Visitor& visitor) override;
 };

@@ -55,7 +55,8 @@ UnaryOp tokenToUnaryOp(int token) {
 %token LOCAL FOR IF THEN ELSE ELSEIF WHILE DO REPEAT UNTIL FUNCTION END RETURN NIL
 %token AND OR NOT EQ NE LE GE CONC
 
-%type <expr> expr primary_expr
+%type <expr> expr simpleexp suffixedexp primaryexp functioncall
+%type <exprList> funcargs
 %type <stmt> stmt function_decl return_stmt for_stmt if_stmt while_stmt repeat_stmt
 %type <stmtList> stmt_list
 %type <identList> param_list
@@ -114,8 +115,7 @@ stmt        : ';'                         { $$ = nullptr; }
                                                     std::make_unique<VarExpr>($1),
                                                     std::unique_ptr<Expr>($3),
                                                     std::unique_ptr<Expr>($6)); }
-            | expr                        { $$ = new ExprStmt(std::unique_ptr<Expr>($1)); }
-            ;
+            | functioncall                { $$ = new ExprStmt(std::unique_ptr<Expr>($1)); }            ;
 
 function_decl: FUNCTION IDENTIFIER '(' param_list ')' stmt_list END
     {
@@ -238,7 +238,57 @@ expr_list   : expr
     }
     ;
 
-expr        : primary_expr               { $$ = $1; }
+primaryexp  : IDENTIFIER                 { $$ = new VarExpr($1); }
+            | '(' expr ')'               { $$ = $2; }
+            ;
+
+suffixedexp : primaryexp
+            | suffixedexp '.' IDENTIFIER
+            {
+                $$ = new FieldAccessExpr(
+                    std::unique_ptr<Expr>($1),
+                    $3
+                );
+            }
+            | suffixedexp '[' expr ']'
+            {
+                $$ = new ArrayAccessExpr(
+                    std::unique_ptr<Expr>($1),
+                    std::unique_ptr<Expr>($3)
+                );
+            }
+            | suffixedexp funcargs
+            {
+                std::vector<std::unique_ptr<Expr>> args;
+                for (auto& arg : *$2) {
+                    args.push_back(std::move(arg));
+                }
+                $$ = new CallExpr(
+                    std::unique_ptr<Expr>($1),
+                    std::move(args)
+                );
+                delete $2;
+            }
+            ;
+
+funcargs    : '(' arg_list ')'
+            {
+                $$ = $2;
+            }
+            ;
+
+simpleexp   : NIL                        { $$ = new NilExpr(); }
+            | NUMBER                     { $$ = new NumberExpr($1); }
+            | STRING                     { $$ = new StringExpr($1); }
+            | suffixedexp                { $$ = $1; }
+            ;
+
+expr        : simpleexp                  { $$ = $1; }
+            | '-' expr %prec NOT         { $$ = new UnaryExpr(UnaryOp::NEG,
+                                                             std::unique_ptr<Expr>($2)); }
+            | NOT expr
+            {
+                (yyval.expr) = new UnaryExpr(UnaryOp::NOT_OP, std::unique_ptr<Expr>((yyvsp[(2) - (2)].expr)));}
             | expr '+' expr              { $$ = new BinaryExpr(BinaryOp::ADD,
                                                              std::unique_ptr<Expr>($1),
                                                              std::unique_ptr<Expr>($3)); }
@@ -251,11 +301,6 @@ expr        : primary_expr               { $$ = $1; }
             | expr '/' expr              { $$ = new BinaryExpr(BinaryOp::DIV,
                                                              std::unique_ptr<Expr>($1),
                                                              std::unique_ptr<Expr>($3)); }
-            | '-' expr %prec NOT         { $$ = new UnaryExpr(UnaryOp::NEG,
-                                                             std::unique_ptr<Expr>($2)); }
-            | NOT expr
-            {
-                (yyval.expr) = new UnaryExpr(UnaryOp::NOT_OP, std::unique_ptr<Expr>((yyvsp[(2) - (2)].expr)));}
             | expr AND expr              { $$ = new BinaryExpr(BinaryOp::AND_OP,
                                                              std::unique_ptr<Expr>($1),
                                                              std::unique_ptr<Expr>($3)); }
@@ -273,39 +318,24 @@ expr        : primary_expr               { $$ = $1; }
                                                              std::unique_ptr<Expr>($3)); }
             ;
 
-primary_expr: NUMBER                     { $$ = new NumberExpr($1); }
-            | STRING                     { $$ = new StringExpr($1); }
-            | NIL                        { $$ = new NilExpr(); }
-            | IDENTIFIER                 { $$ = new VarExpr($1); }
-            | primary_expr '[' expr ']'
-            {
-                $$ = new ArrayAccessExpr(
-                    std::unique_ptr<Expr>($1),
-                    std::unique_ptr<Expr>($3)
-                );
-            }
-            | IDENTIFIER '(' arg_list ')'
+functioncall: suffixedexp funcargs
             {
                 std::vector<std::unique_ptr<Expr>> args;
-                for (auto& arg : *$3) {
+                for (auto& arg : *$2) {
                     args.push_back(std::move(arg));
                 }
-                $$ = new CallExpr($1, std::move(args));
-                delete $3;
-            }
-            | '(' expr ')'               { $$ = $2; }
-            | primary_expr "." IDENTIFIER
-            {
-                $$ = new FieldAccessExpr(
+                $$ = new CallExpr(
                     std::unique_ptr<Expr>($1),
-                    $3
+                    std::move(args)
                 );
-            }            ;
+                delete $2;
+            }
+            ;
+
 
 arg_list    : /* empty */               { $$ = new std::vector<std::unique_ptr<Expr>>(); }
             | expr_list                  { $$ = $1; }
             ;
-
 %%
 
 void yyerror(const char *s) {

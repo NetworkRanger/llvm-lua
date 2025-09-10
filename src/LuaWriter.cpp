@@ -225,3 +225,12 @@ void LuaWriter::visit(FieldAccessExpr* node) {
     node->getObject()->accept(*this);
     std::cout << "." << node->getFieldName();
 }
+
+void LuaWriter::visit(ArrayLiteralExpr* node) {
+    std::cout << "{";
+    for (size_t i = 0; i < node->getElements().size(); ++i) {
+        if (i > 0) std::cout << ", ";
+        node->getElements()[i]->accept(*this);
+    }
+    std::cout << "}";
+}
