@@ -286,6 +286,7 @@ simpleexp   : NIL                        { $$ = new NilExpr(); }
             | NUMBER                     { $$ = new NumberExpr($1); }
             | STRING                     { $$ = new StringExpr($1); }
             | suffixedexp                { $$ = $1; }
+            | '{' '}'                    { $$ = new ArrayLiteralExpr(std::vector<std::unique_ptr<Expr>>()); }
             ;
 
 expr        : simpleexp                  { $$ = $1; }
