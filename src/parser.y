@@ -73,6 +73,7 @@ UnaryOp tokenToUnaryOp(int token) {
 %right NOT
 %right '^'
 %left '[' ']'
+%right '='
 
 %%
 
@@ -111,8 +112,8 @@ stmt        : ';'                         { $$ = nullptr; }
             | if_stmt                     { $$ = $1; }
             | while_stmt                  { $$ = $1; }
             | repeat_stmt                 { $$ = $1; }
-            | IDENTIFIER "=" expr         { $$ = new AssignmentStmt($1, std::unique_ptr<Expr>($3)); }
-            | IDENTIFIER "[" expr "]" "=" expr { $$ = new ArrayAssignmentStmt(
+            | IDENTIFIER '=' expr         { $$ = new AssignmentStmt($1, std::unique_ptr<Expr>($3)); }
+            | IDENTIFIER '[' expr ']' '=' expr { $$ = new ArrayAssignmentStmt(
                                                     std::make_unique<VarExpr>($1),
                                                     std::unique_ptr<Expr>($3),
                                                     std::unique_ptr<Expr>($6)); }
