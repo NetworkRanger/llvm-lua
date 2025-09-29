@@ -7,7 +7,7 @@
 
 // 二元操作符
 enum class BinaryOp {
-    ADD, SUB, MUL, DIV, MOD,
+    ADD, SUB, MUL, DIV, MOD, POW,
     EQ_OP, NEQ_OP, LT, LT_EQ, GT, GT_EQ,
     AND_OP, OR_OP, CONCAT
 };

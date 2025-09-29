@@ -178,6 +178,13 @@ void CodeGenerator::visit(BinaryExpr* node) {
         case BinaryOp::MOD:
             lastValue = builder->CreateFRem(L, R, "modtmp");
             break;
+        case BinaryOp::POW: {
+            // 使用 LLVM 的 pow 内建函数
+            llvm::Function* powFunc = llvm::Intrinsic::getOrInsertDeclaration(
+                module.get(), llvm::Intrinsic::pow, llvm::Type::getDoubleTy(*context));
+            lastValue = builder->CreateCall(powFunc, {L, R}, "powtmp");
+            break;
+        }
         case BinaryOp::EQ_OP:
             lastValue = builder->CreateFCmpOEQ(L, R, "eqtmp");
             break;
@@ -196,12 +203,30 @@ void CodeGenerator::visit(BinaryExpr* node) {
         case BinaryOp::LT_EQ:
             lastValue = builder->CreateFCmpOLE(L, R, "letmp");
             break;
-        case BinaryOp::AND_OP:
-            lastValue = builder->CreateAnd(L, R, "andtmp");
+        case BinaryOp::AND_OP: {
+            // 将 double 转换为 bool：非0为真，0为假
+            llvm::Value* LBool = builder->CreateFCmpONE(L, 
+                llvm::ConstantFP::get(*context, llvm::APFloat(0.0)), "ltmp");
+            llvm::Value* RBool = builder->CreateFCmpONE(R, 
+                llvm::ConstantFP::get(*context, llvm::APFloat(0.0)), "rtmp");
+            llvm::Value* result = builder->CreateAnd(LBool, RBool, "andtmp");
+            // 将布尔结果转换回 double：true->1.0, false->0.0
+            lastValue = builder->CreateUIToFP(result, 
+                llvm::Type::getDoubleTy(*context), "andresult");
             break;
-        case BinaryOp::OR_OP:
-            lastValue = builder->CreateOr(L, R, "ortmp");
+        }
+        case BinaryOp::OR_OP: {
+            // 将 double 转换为 bool：非0为真，0为假
+            llvm::Value* LBool = builder->CreateFCmpONE(L, 
+                llvm::ConstantFP::get(*context, llvm::APFloat(0.0)), "ltmp");
+            llvm::Value* RBool = builder->CreateFCmpONE(R, 
+                llvm::ConstantFP::get(*context, llvm::APFloat(0.0)), "rtmp");
+            llvm::Value* result = builder->CreateOr(LBool, RBool, "ortmp");
+            // 将布尔结果转换回 double：true->1.0, false->0.0
+            lastValue = builder->CreateUIToFP(result, 
+                llvm::Type::getDoubleTy(*context), "orresult");
             break;
+        }
         case BinaryOp::CONCAT:
             // 字符串连接需要特殊处理，暂时先实现简单版本
             // 这里需要调用字符串连接函数
