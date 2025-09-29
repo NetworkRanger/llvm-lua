@@ -52,7 +52,7 @@ int line_number = 1;
 
 [a-zA-Z_][a-zA-Z0-9_]* { yylval.string = strdup(yytext); return IDENTIFIER; }
 
-[-+*/%^<>=,;(){}[\].] { return yytext[0]; }
+[-+*/%^<>=,;(){}[\].#] { return yytext[0]; }
 
 .               { printf("Unknown character: %s\n", yytext); }
 

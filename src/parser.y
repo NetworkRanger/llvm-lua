@@ -88,7 +88,8 @@ program     : stmt_list
     }
     ;
 
-stmt_list   : stmt    {
+stmt_list   : /* empty */            { $$ = new std::vector<std::unique_ptr<Stmt>>(); }
+            | stmt    {
         $$ = new std::vector<std::unique_ptr<Stmt>>();
         if ($1) {
             $$->push_back(std::unique_ptr<Stmt>($1));
